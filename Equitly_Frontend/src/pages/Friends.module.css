@@ -1,0 +1,47 @@
+.card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; }
+.cardHeader { padding: 18px 22px 14px; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; }
+.cardTitle { font-family: var(--font-display); font-size: 16px; font-weight: 600; }
+.headerActions { display: flex; gap: 8px; }
+.cardBody { padding: 0 22px; }
+
+.row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 14px 0;
+  border-bottom: 1px solid var(--border);
+}
+.row:last-child { border-bottom: none; }
+.row:hover .removeBtn { opacity: 1; }
+
+.info { flex: 1; }
+.name { font-size: 14px; font-weight: 500; }
+.email { font-size: 12px; color: var(--text2); margin-top: 2px; }
+
+.removeBtn {
+  opacity: 0;
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 13px;
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  color: var(--text2);
+  transition: opacity 0.15s, background 0.15s;
+}
+.removeBtn:hover { background: var(--accent2-light); color: var(--accent2); }
+
+.empty { text-align: center; padding: 40px 20px; color: var(--text2); }
+.emptyIcon { font-size: 38px; margin-bottom: 12px; }
+.empty p { font-size: 14px; }
+
+.formGroup { display: flex; flex-direction: column; gap: 5px; }
+.label { font-size: 12px; font-weight: 600; color: var(--text2); letter-spacing: 0.04em; text-transform: uppercase; }
+.input { padding: 10px 14px; border: 1px solid var(--border); border-radius: var(--radius-sm); font-family: var(--font); font-size: 14px; background: var(--bg); color: var(--text); outline: none; width: 100%; }
+.input:focus { border-color: var(--accent); }
+.hint { font-size: 12px; color: var(--text2); }
+
+.btnPrimary { padding: 8px 16px; background: var(--accent); color: #fff; border: none; border-radius: var(--radius-sm); font-family: var(--font); font-size: 13px; font-weight: 500; cursor: pointer; }
+.btnPrimary:disabled { opacity: 0.6; cursor: not-allowed; }
+.btnOutline { padding: 8px 16px; background: none; border: 1px solid var(--border); border-radius: var(--radius-sm); font-family: var(--font); font-size: 13px; cursor: pointer; color: var(--text); }

@@ -1,0 +1,12 @@
+.wrap { max-width: 540px; }
+.card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; }
+.cardHeader { padding: 18px 22px 14px; border-bottom: 1px solid var(--border); }
+.cardTitle { font-family: var(--font-display); font-size: 16px; font-weight: 600; }
+.cardBody { padding: 20px 22px; display: flex; flex-direction: column; gap: 16px; }
+.formGroup { display: flex; flex-direction: column; gap: 5px; }
+.label { font-size: 12px; font-weight: 600; color: var(--text2); letter-spacing: 0.04em; text-transform: uppercase; }
+.input, .select { padding: 10px 14px; border: 1px solid var(--border); border-radius: var(--radius-sm); font-family: var(--font); font-size: 14px; background: var(--bg); color: var(--text); outline: none; width: 100%; }
+.input:focus, .select:focus { border-color: var(--accent); }
+.input:disabled { opacity: 0.6; cursor: not-allowed; }
+.btnPrimary { align-self: flex-start; padding: 10px 20px; background: var(--accent); color: #fff; border: none; border-radius: var(--radius-sm); font-family: var(--font); font-size: 14px; font-weight: 500; cursor: pointer; }
+.btnPrimary:disabled { opacity: 0.6; cursor: not-allowed; }
