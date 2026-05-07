@@ -514,3 +514,63 @@
     font-weight: 600;
     color: var(--accent);
 }
+
+/* Warn button — leave group when settled */
+.btnWarn {
+    padding: 8px 14px;
+    background: var(--warn-light);
+    color: var(--warn);
+    border: 1px solid var(--warn);
+    border-radius: var(--radius-sm);
+    font-family: var(--font);
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: opacity 0.15s;
+}
+.btnWarn:hover { opacity: 0.82; }
+
+/* Danger button — delete group when settled */
+.btnDanger {
+    padding: 8px 14px;
+    background: var(--accent2-light);
+    color: var(--accent2);
+    border: 1px solid var(--accent2);
+    border-radius: var(--radius-sm);
+    font-family: var(--font);
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: opacity 0.15s;
+}
+.btnDanger:hover { opacity: 0.82; }
+
+/* Disabled warn — leave group when NOT settled */
+.btnDisabledWarn {
+    padding: 8px 14px;
+    background: var(--surface2);
+    color: var(--text3);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    font-family: var(--font);
+    font-size: 13px;
+    cursor: not-allowed;
+    white-space: nowrap;
+    opacity: 0.7;
+}
+
+/* Disabled danger — delete group when NOT settled */
+.btnDisabledDanger {
+    padding: 8px 14px;
+    background: var(--surface2);
+    color: var(--text3);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    font-family: var(--font);
+    font-size: 13px;
+    cursor: not-allowed;
+    white-space: nowrap;
+    opacity: 0.7;
+}

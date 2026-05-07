@@ -231,24 +231,10 @@ export default function Sidebar() {
                                             </div>
 
                                             {/* Info */}
-                                            <div className={
-                                                styles.friendInfo}>
-                                                <span className={
-                                                    styles.friendName}>
+                                            <div className={styles.friendInfo}>
+                                                <span className={styles.friendName}>
                                                     {person.name}
                                                 </span>
-                                                {Math.abs(bal) > 0.01 && (
-                                                    <span className={
-                                                        bal > 0
-                                                            ? styles.balPos
-                                                            : styles.balNeg
-                                                    }>
-                                                        {bal > 0
-                                                            ? `owes ₹${bal.toFixed(0)}`
-                                                            : `owe ₹${Math.abs(bal).toFixed(0)}`
-                                                        }
-                                                    </span>
-                                                )}
                                             </div>
                                         </NavLink>
                                     )

@@ -1,0 +1,73 @@
+# ════════════════════════════════
+# BACKEND — Java / Spring Boot / Maven
+# ════════════════════════════════
+
+# Maven compiled output
+Equitly_Backend/target/
+Equitly_Backend/*.jar
+Equitly_Backend/*.war
+Equitly_Backend/*.class
+
+# Maven wrapper (optional — keep if you want)
+# Equitly_Backend/.mvn/
+
+# Spring Boot logs
+Equitly_Backend/logs/
+Equitly_Backend/*.log
+
+# Uploaded files (receipts etc.)
+Equitly_Backend/uploads/
+
+# Production properties (contains passwords)
+Equitly_Backend/src/main/resources/application-prod.properties
+
+# STS / Eclipse IDE files
+Equitly_Backend/.settings/
+Equitly_Backend/.classpath
+Equitly_Backend/.project
+Equitly_Backend/.sts4-cache/
+Equitly_Backend/.factorypath
+
+# IntelliJ IDEA
+Equitly_Backend/.idea/
+Equitly_Backend/*.iml
+Equitly_Backend/*.iws
+Equitly_Backend/*.ipr
+
+# ════════════════════════════════
+# FRONTEND — React / Node.js / Vite
+# ════════════════════════════════
+
+# Node modules (never upload — 400MB+)
+Equitly_Frontend/node_modules/
+
+# Build output
+Equitly_Frontend/dist/
+Equitly_Frontend/build/
+
+# Environment files (contains API keys)
+Equitly_Frontend/.env.local
+Equitly_Frontend/.env.production
+
+# Vite cache
+Equitly_Frontend/.vite/
+
+# NPM logs
+Equitly_Frontend/npm-debug.log*
+Equitly_Frontend/yarn-debug.log*
+Equitly_Frontend/*.log
+
+# ════════════════════════════════
+# COMMON — Both folders
+# ════════════════════════════════
+
+# OS files
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Editor files
+.vscode/
+*.swp
+*.swo
+*~

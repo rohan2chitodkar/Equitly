@@ -61,10 +61,16 @@ export default function GroupDetail() {
                     groupApi.checkSettled(id)
                 ])
                 setGroup(g)
-                setExpenses(Array.isArray(g.expenses) ? g.expenses : [])
+                setExpenses(Array.isArray(g.expenses)
+                    ? g.expenses : [])
                 setBalances(Array.isArray(b) ? b : [])
-                setSettledStatus(s)
-            } catch {
+                // Make sure settledStatus is set correctly
+                setSettledStatus({
+                    fullySettled: s?.fullySettled === true,
+                    memberSettled: s?.memberSettled === true
+                })
+            } catch (err) {
+                console.error('Failed to load group:', err)
                 toast.error('Failed to load group')
             } finally {
                 setLoading(false)
@@ -89,7 +95,9 @@ export default function GroupDetail() {
         setAddingMember(true)
         try {
             const updated = await groupApi.addMember(id, memberEmail.trim())
-            setGroup(updated)
+            // Re-fetch full group data to get updated members list
+            const freshGroup = await groupApi.getById(id)
+            setGroup(freshGroup)
             setMemberEmail('')
             setShowAddMember(false)
             toast.success('Member added!')
@@ -606,74 +614,101 @@ export default function GroupDetail() {
                                             Share Group Link
                                         </div>
                                         <div className={styles.settingDesc}>
-                                            Invite friends via link
+                                            Invite new members via link
                                         </div>
                                     </div>
                                     <button
                                         className={styles.btnSmall}
                                         onClick={handleShareLink}
                                     >
-                                        {linkCopied
-                                            ? '✅ Copied'
-                                            : '🔗 Copy'}
+                                        {linkCopied ? '✅ Copied' : '🔗 Copy Link'}
                                     </button>
                                 </div>
 
-                                {/* Leave group */}
+                                {/* Add Member */}
+                                <div className={styles.settingRow}>
+                                    <div className={styles.settingInfo}>
+                                        <div className={styles.settingTitle}>
+                                            Add Member
+                                        </div>
+                                        <div className={styles.settingDesc}>
+                                            Add a new member by email
+                                        </div>
+                                    </div>
+                                    <button
+                                        className={styles.btnSmall}
+                                        onClick={() => setShowAddMember(true)}
+                                    >
+                                        + Add
+                                    </button>
+                                </div>
+
+                                {/* Leave Group — non-creators only */}
                                 {!isCreator && (
                                     <div className={styles.settingRow}>
                                         <div className={styles.settingInfo}>
-                                            <div className={
-                                                styles.settingTitle}>
+                                            <div className={styles.settingTitle}>
                                                 Leave Group
                                             </div>
-                                            <div className={
-                                                styles.settingDesc}>
+                                            <div className={styles.settingDesc}>
                                                 {settledStatus.memberSettled
-                                                    ? '✅ You are settled'
-                                                    : '⚠️ Settle balance first'}
+                                                    ? '✅ Your balance is settled. You can leave.'
+                                                    : '⚠️ You must settle your balance before leaving.'}
                                             </div>
                                         </div>
                                         <button
-                                            className={`${styles.btnDanger} ${!settledStatus.memberSettled ? styles.btnDisabled : ''}`}
-                                            onClick={handleLeave}
-                                            disabled={
-                                                !settledStatus.memberSettled ||
-                                                leaving
+                                            className={
+                                                settledStatus.memberSettled
+                                                    ? styles.btnWarn
+                                                    : styles.btnDisabledWarn
                                             }
+                                            onClick={
+                                                settledStatus.memberSettled
+                                                    ? handleLeave
+                                                    : () => toast.error(
+                                                        'Please settle your balance first'
+                                                    )
+                                            }
+                                            disabled={leaving}
                                         >
-                                            {leaving ? '...' : 'Leave'}
+                                            {leaving ? 'Leaving…' : '🚪 Leave Group'}
                                         </button>
                                     </div>
                                 )}
 
-                                {/* Delete group */}
+                                {/* Delete Group — creator only */}
                                 {isCreator && (
                                     <div className={styles.settingRow}>
                                         <div className={styles.settingInfo}>
-                                            <div className={
-                                                styles.settingTitle}>
+                                            <div className={styles.settingTitle}>
                                                 Delete Group
                                             </div>
-                                            <div className={
-                                                styles.settingDesc}>
+                                            <div className={styles.settingDesc}>
                                                 {settledStatus.fullySettled
-                                                    ? '✅ All settled'
-                                                    : '⚠️ All must settle first'}
+                                                    ? '✅ All members settled. You can delete.'
+                                                    : '⚠️ All members must settle before deleting.'}
                                             </div>
                                         </div>
                                         <button
-                                            className={`${styles.btnDanger} ${!settledStatus.fullySettled ? styles.btnDisabled : ''}`}
-                                            onClick={handleDelete}
-                                            disabled={
-                                                !settledStatus.fullySettled ||
-                                                deleting
+                                            className={
+                                                settledStatus.fullySettled
+                                                    ? styles.btnDanger
+                                                    : styles.btnDisabledDanger
                                             }
+                                            onClick={
+                                                settledStatus.fullySettled
+                                                    ? handleDelete
+                                                    : () => toast.error(
+                                                        'All members must settle first'
+                                                    )
+                                            }
+                                            disabled={deleting}
                                         >
-                                            {deleting ? '...' : 'Delete'}
+                                            {deleting ? 'Deleting…' : '🗑️ Delete Group'}
                                         </button>
                                     </div>
                                 )}
+
                             </div>
                         </div>
                     )}

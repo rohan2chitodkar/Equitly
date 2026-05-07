@@ -23,5 +23,12 @@ export const groupApi = {
     leave: (groupId) =>
         api.post(`/groups/${groupId}/leave`).then(r => r.data),
     checkSettled: (groupId) =>
-        api.get(`/groups/${groupId}/settled`).then(r => r.data)
+        api.get(`/groups/${groupId}/settled`)
+            .then(r => r.data)
+            .catch(() => ({
+                fullySettled: false,
+                memberSettled: false
+            }
+        )
+    )
 }

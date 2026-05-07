@@ -219,15 +219,20 @@ public class GroupController {
     }
 
     @GetMapping("/{id}/settled")
-    public ResponseEntity<java.util.Map<String, Object>> checkSettled(
+    public ResponseEntity<Map<String, Object>> checkSettled(
             @PathVariable String id,
             @AuthenticationPrincipal UserDetails userDetails) {
-        User user = userService.getCurrentUser(userDetails.getUsername());
+        User user = userService.getCurrentUser(
+                userDetails.getUsername());
+
         boolean fullySettled = groupService.isGroupFullySettled(id);
-        boolean memberSettled = groupService.isMemberSettledInGroup(id, user.getId());
-        return ResponseEntity.ok(java.util.Map.of(
-            "fullySettled", fullySettled,
-            "memberSettled", memberSettled
-        ));
+        boolean memberSettled = groupService
+                .isMemberSettledInGroup(id, user.getId());
+
+        Map<String, Object> result = new java.util.HashMap<>();
+        result.put("fullySettled", fullySettled);
+        result.put("memberSettled", memberSettled);
+
+        return ResponseEntity.ok(result);
     }
 }

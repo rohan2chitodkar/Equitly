@@ -87,10 +87,9 @@ export default function Login() {
                             <button
                                 type="button"
                                 className={styles.eyeBtn}
-                                onClick={() =>
-                                    setShowPassword(p => !p)}
+                                onClick={() => setShowPassword(p => !p)}
                             >
-                                {showPassword ? '🙈' : '👁️'}
+                                {showPassword ? 'Hide' : 'Show'}
                             </button>
                         </div>
                     </div>
