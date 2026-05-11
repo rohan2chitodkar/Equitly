@@ -1,18 +1,17 @@
 package com.equitly.controller;
 
-import org.springframework.http.ResponseEntity;
-import org.springframework.security.core.annotation.AuthenticationPrincipal;
-import org.springframework.security.core.userdetails.UserDetails;
-import org.springframework.web.bind.annotation.*;
-
 import com.equitly.model.Expense;
 import com.equitly.model.User;
 import com.equitly.service.ExpenseService;
 import com.equitly.service.UserService;
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation
+        .AuthenticationPrincipal;
+import org.springframework.security.core.userdetails
+        .UserDetails;
+import org.springframework.web.bind.annotation.*;
 
-import java.math.BigDecimal;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 @RestController
 @RequestMapping("/api/expenses")
@@ -20,100 +19,151 @@ public class ExpenseController {
 
     private final ExpenseService expenseService;
     private final UserService userService;
-    
-    public ExpenseController(ExpenseService expenseService, UserService userService) {
-		this.expenseService = expenseService;
-		this.userService = userService;
-	}
 
-	@GetMapping
-    public ResponseEntity<List<Expense>> getExpenses(
-            @AuthenticationPrincipal UserDetails userDetails,
-            @RequestParam(required = false) String groupId) {
-        User user = userService.getCurrentUser(userDetails.getUsername());
+    public ExpenseController(
+            ExpenseService expenseService,
+            UserService userService) {
+        this.expenseService = expenseService;
+        this.userService = userService;
+    }
+
+    // ── Get all expenses ──
+    @GetMapping
+    public ResponseEntity<List<Map<String, Object>>>
+            getExpenses(
+            @AuthenticationPrincipal
+            UserDetails userDetails,
+            @RequestParam(required = false)
+            String groupId) {
+
+        User user = userService.getCurrentUser(
+                userDetails.getUsername());
+
         List<Expense> expenses = groupId != null
                 ? expenseService.getExpensesForGroup(groupId)
-                : expenseService.getExpensesForUser(user.getId());
-        return ResponseEntity.ok(expenses);
+                : expenseService.getExpensesForUser(
+                        user.getId());
+
+        return ResponseEntity.ok(
+                expenses.stream()
+                        .map(this::toMap)
+                        .collect(java.util.stream
+                                .Collectors.toList()));
     }
 
+    // ── Create expense ──
     @PostMapping
-    public ResponseEntity<Expense> createExpense(
-            @AuthenticationPrincipal UserDetails userDetails,
+    public ResponseEntity<Map<String, Object>>
+            createExpense(
+            @AuthenticationPrincipal
+            UserDetails userDetails,
             @RequestBody Map<String, Object> body) {
-        User user = userService.getCurrentUser(userDetails.getUsername());
 
-        String description = (String) body.get("description");
-        BigDecimal amount = new BigDecimal(body.get("amount").toString());
-        String category = (String) body.get("category");
-        String paidById = (String) body.get("paidById");
-        String groupId = (String) body.get("groupId");
-        Expense.SplitType splitType = body.get("splitType") != null
-                ? Expense.SplitType.valueOf(
-                    body.get("splitType").toString().toUpperCase())
-                : Expense.SplitType.EQUAL;
-
-        @SuppressWarnings("unchecked")
-        List<Map<String, Object>> splits = (List<Map<String, Object>>) body.get("splits");
+        User user = userService.getCurrentUser(
+                userDetails.getUsername());
 
         Expense expense = expenseService.createExpense(
-                user.getId(), description, amount, category, paidById, groupId, splitType, splits);
-        return ResponseEntity.ok(expense);
+                user.getId(), body);
+
+        return ResponseEntity.ok(toMap(expense));
     }
 
+    // ── Update expense ──
     @PutMapping("/{id}")
-    public ResponseEntity<Expense> updateExpense(
+    public ResponseEntity<Map<String, Object>>
+            updateExpense(
             @PathVariable String id,
-            @AuthenticationPrincipal UserDetails userDetails,
+            @AuthenticationPrincipal
+            UserDetails userDetails,
             @RequestBody Map<String, Object> body) {
 
-        User user = userService.getCurrentUser(userDetails.getUsername());
+        User user = userService.getCurrentUser(
+                userDetails.getUsername());
 
-        String description = (String) body.get("description");
-        BigDecimal amount = new BigDecimal(body.get("amount").toString());
-        String category = (String) body.get("category");
-        String paidById = (String) body.get("paidById");
+        Expense expense = expenseService.updateExpense(
+                id, user.getId(), body);
 
-        Expense.SplitType splitType = body.get("splitType") != null
-                ? Expense.SplitType.valueOf(
-                    body.get("splitType").toString().toUpperCase())
-                : Expense.SplitType.EQUAL;
-
-        @SuppressWarnings("unchecked")
-        List<Map<String, Object>> splits =
-                (List<Map<String, Object>>) body.get("splits");
-
-        Expense updated = expenseService.updateExpense(
-                id, user.getId(), description, amount,
-                category, paidById, splitType, splits);
-
-        return ResponseEntity.ok(updated);
+        return ResponseEntity.ok(toMap(expense));
     }
 
+    // ── Delete expense ──
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> deleteExpense(
             @PathVariable String id,
-            @AuthenticationPrincipal UserDetails userDetails) {
-        User user = userService.getCurrentUser(userDetails.getUsername());
+            @AuthenticationPrincipal
+            UserDetails userDetails) {
+
+        User user = userService.getCurrentUser(
+                userDetails.getUsername());
+
         expenseService.deleteExpense(id, user.getId());
+
         return ResponseEntity.noContent().build();
     }
 
-    @GetMapping("/activity")
-    public ResponseEntity<List<Map<String, Object>>> getActivity(
-            @AuthenticationPrincipal UserDetails userDetails) {
-        User user = userService.getCurrentUser(userDetails.getUsername());
-        List<Expense> expenses = expenseService.getExpensesForUser(user.getId());
+    // ── Convert Expense to safe Map ──
+    private Map<String, Object> toMap(Expense e) {
+        Map<String, Object> map =
+                new java.util.LinkedHashMap<>();
+        map.put("id", e.getId());
+        map.put("description", e.getDescription());
+        map.put("amount", e.getAmount());
+        map.put("category", e.getCategory());
+        map.put("splitType", e.getSplitType());
+        map.put("createdAt", e.getCreatedAt());
 
-        List<Map<String, Object>> activity = new java.util.ArrayList<>();
-        for (Expense e : expenses) {
-            Map<String, Object> item = new java.util.HashMap<>();
-            item.put("type", "expense");
-            item.put("description", e.getPaidBy().getName() + " added \"" + e.getDescription() + "\" — ₹" + e.getAmount());
-            item.put("createdAt", e.getCreatedAt().toString());
-            activity.add(item);
+        if (e.getPaidBy() != null) {
+            Map<String, Object> paidBy =
+                    new java.util.HashMap<>();
+            paidBy.put("id", e.getPaidBy().getId());
+            paidBy.put("name", e.getPaidBy().getName());
+            paidBy.put("email", e.getPaidBy().getEmail());
+            map.put("paidBy", paidBy);
         }
 
-        return ResponseEntity.ok(activity);
+        if (e.getCreatedBy() != null) {
+            Map<String, Object> createdBy =
+                    new java.util.HashMap<>();
+            createdBy.put("id",
+                    e.getCreatedBy().getId());
+            createdBy.put("name",
+                    e.getCreatedBy().getName());
+            map.put("createdBy", createdBy);
+        }
+
+        if (e.getGroup() != null) {
+            Map<String, Object> group =
+                    new java.util.HashMap<>();
+            group.put("id", e.getGroup().getId());
+            group.put("name", e.getGroup().getName());
+            map.put("group", group);
+        }
+
+        // Splits — include BOTH formats
+        if (e.getSplits() != null) {
+            List<Map<String, Object>> splits =
+                    e.getSplits().stream().map(s -> {
+                Map<String, Object> split =
+                        new java.util.HashMap<>();
+                split.put("userId",
+                        s.getUser().getId());
+                split.put("userName",
+                        s.getUser().getName());
+                split.put("amount", s.getAmount());
+                split.put("settled", s.isSettled());
+                // Also include user object
+                Map<String, Object> userObj =
+                        new java.util.HashMap<>();
+                userObj.put("id", s.getUser().getId());
+                userObj.put("name",
+                        s.getUser().getName());
+                split.put("user", userObj);
+                return split;
+            }).collect(java.util.stream
+                    .Collectors.toList());
+            map.put("splits", splits);
+        }
+
+        return map;
     }
 }

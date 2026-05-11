@@ -26,11 +26,33 @@ public class BalanceController {
 		this.userService = userService;
 	}
 
-	@GetMapping
-    public ResponseEntity<List<BalanceService.BalanceEntry>> getBalances(
-            @AuthenticationPrincipal UserDetails userDetails) {
-        User user = userService.getCurrentUser(userDetails.getUsername());
-        return ResponseEntity.ok(balanceService.getBalances(user.getId()));
+    @GetMapping
+    public ResponseEntity<List<Map<String, Object>>>
+            getBalances(
+            @AuthenticationPrincipal
+            UserDetails userDetails) {
+
+        User user = userService.getCurrentUser(
+                userDetails.getUsername());
+
+        List<BalanceService.BalanceEntry> balances =
+                balanceService.getBalances(user.getId());
+
+        List<Map<String, Object>> response =
+                balances.stream().map(b -> {
+                    Map<String, Object> map =
+                            new java.util.HashMap<>();
+                    map.put("friendId", b.getFriendId());
+                    map.put("friendName",
+                            b.getFriendName());
+                    map.put("friendEmail",
+                            b.getFriendEmail());
+                    map.put("netAmount", b.getNetAmount());
+                    return map;
+                }).collect(java.util.stream
+                        .Collectors.toList());
+
+        return ResponseEntity.ok(response);
     }
 
 	@PostMapping("/settle")

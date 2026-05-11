@@ -19,72 +19,94 @@ import java.util.stream.Collectors;
 public class ActivityService {
 
     private final ActivityRepository activityRepository;
-    private final ActivityMemberRepository activityMemberRepository;
+    private final ActivityMemberRepository
+            activityMemberRepository;
     private final GroupRepository groupRepository;
     private final UserRepository userRepository;
 
-    public ActivityService(ActivityRepository activityRepository,
-                           ActivityMemberRepository activityMemberRepository,
-                           GroupRepository groupRepository,
-                           UserRepository userRepository) {
+    public ActivityService(
+            ActivityRepository activityRepository,
+            ActivityMemberRepository
+                    activityMemberRepository,
+            GroupRepository groupRepository,
+            UserRepository userRepository) {
         this.activityRepository = activityRepository;
-        this.activityMemberRepository = activityMemberRepository;
+        this.activityMemberRepository =
+                activityMemberRepository;
         this.groupRepository = groupRepository;
         this.userRepository = userRepository;
     }
 
-    // ── Helper — save who can see this activity ──
-    private void saveActivityMembers(Activity activity,
-                                     List<String> userIds) {
+    // ════════════════════════════════════════
+    // ── Helper — save activity members ──
+    // ════════════════════════════════════════
+    private void saveActivityMembers(
+            Activity activity,
+            List<String> userIds) {
         for (String userId : userIds) {
-            ActivityMember am = new ActivityMember(activity, userId);
+            ActivityMember am =
+                    new ActivityMember(
+                            activity, userId);
             activityMemberRepository.save(am);
         }
     }
 
-    // ── Helper — get all member IDs of a group ──
-    private List<String> getGroupMemberIds(String groupId) {
-        return groupRepository.findByIdWithMembers(groupId)
+    // ── Helper — get group member IDs ──
+    private List<String> getGroupMemberIds(
+            String groupId) {
+        return groupRepository
+                .findByIdWithMembers(groupId)
                 .map(g -> g.getMembers().stream()
                         .map(User::getId)
                         .collect(Collectors.toList()))
                 .orElse(new ArrayList<>());
     }
 
-    // ── Get all activities for user ──
-    public List<Activity> getActivitiesForUser(String userId) {
+    // ════════════════════════════════════════
+    // ── Get activities for user ──
+    // ════════════════════════════════════════
+    public List<Activity> getActivitiesForUser(
+            String userId) {
         try {
-            return activityRepository.findAllByUserId(userId);
+            return activityRepository
+                    .findAllByUserId(userId);
         } catch (Exception e) {
-            System.err.println("Failed to fetch activities: "
+            System.err.println(
+                    "Failed to fetch activities: "
                     + e.getMessage());
             return new ArrayList<>();
         }
     }
 
     // ── Get activities as DTO ──
-    public List<ActivityResponseDto> getActivitiesForUserAsDto(
-            String userId) {
+    public List<ActivityResponseDto>
+            getActivitiesForUserAsDto(String userId) {
         try {
-            return activityRepository.findAllByUserId(userId)
+            return activityRepository
+                    .findAllByUserId(userId)
                     .stream()
-                    .map(this::toDto)
+                    .map(a -> toDtoForUser(a, userId))
                     .collect(Collectors.toList());
         } catch (Exception e) {
-            System.err.println("Failed to fetch activities as DTO: "
+            System.err.println(
+                    "Failed to fetch activities: "
                     + e.getMessage());
             return new ArrayList<>();
         }
     }
 
+    // ════════════════════════════════════════
     // ── Convert Activity to DTO ──
+    // ════════════════════════════════════════
     public ActivityResponseDto toDto(Activity a) {
-        ActivityResponseDto dto = new ActivityResponseDto();
+        ActivityResponseDto dto =
+                new ActivityResponseDto();
         dto.setId(a.getId());
         dto.setType(a.getType());
         dto.setDescription(a.getDescription());
         dto.setGroupName(a.getGroupName());
-        dto.setExpenseDescription(a.getExpenseDescription());
+        dto.setExpenseDescription(
+                a.getExpenseDescription());
         dto.setAmount(a.getAmount());
         dto.setYourShare(a.getYourShare());
         dto.setYourBalance(a.getYourBalance());
@@ -92,174 +114,415 @@ public class ActivityService {
         dto.setTargetUserName(a.getTargetUserName());
         dto.setCreatedAt(a.getCreatedAt());
         if (a.getPerformedBy() != null) {
-            dto.setPerformedById(a.getPerformedBy().getId());
-            dto.setPerformedByName(a.getPerformedBy().getName());
+            dto.setPerformedById(
+                    a.getPerformedBy().getId());
+            dto.setPerformedByName(
+                    a.getPerformedBy().getName());
         }
         return dto;
     }
 
-    // ── Log expense added ──
-    @Transactional(propagation = Propagation.REQUIRES_NEW)
-    public void logExpenseAdded(Expense expense, String currentUserId) {
-        try {
-            BigDecimal yourShare = BigDecimal.ZERO;
-            BigDecimal yourBalance = BigDecimal.ZERO;
+    // ── Convert with personalized balance ──
+    public ActivityResponseDto toDtoForUser(
+            Activity a, String userId) {
 
-            if (expense.getSplits() != null) {
-                for (ExpenseSplit split : expense.getSplits()) {
-                    if (split.getUser().getId().equals(currentUserId)) {
-                        yourShare = split.getAmount();
-                        break;
+        // Start with base dto
+        ActivityResponseDto dto = toDto(a);
+
+        // Override balance with personalized value
+        // stored in activity_members for this user
+        activityMemberRepository
+                .findByActivityIdAndUserId(
+                        a.getId(), userId)
+                .ifPresent(am -> {
+                    if (am.getYourBalance() != null) {
+                        dto.setYourBalance(
+                                am.getYourBalance());
                     }
-                }
-            }
+                    if (am.getYourShare() != null) {
+                        dto.setYourShare(
+                                am.getYourShare());
+                    }
+                });
 
-            boolean youPaid = expense.getPaidBy() != null &&
-                    expense.getPaidBy().getId().equals(currentUserId);
+        return dto;
+    }
 
-            yourBalance = youPaid
-                    ? expense.getAmount().subtract(yourShare)
-                    : yourShare.negate();
-
+    // ════════════════════════════════════════
+    // ── Log expense added (with user IDs) ──
+    // ════════════════════════════════════════
+    @Transactional(propagation =
+            Propagation.REQUIRES_NEW)
+    public void logExpenseAddedWithUsers(
+            Expense expense,
+            String currentUserId,
+            List<String> splitUserIds) {
+        try {
             Activity activity = new Activity();
             activity.setType("EXPENSE_ADDED");
-            activity.setPerformedBy(expense.getCreatedBy());
-            activity.setExpenseDescription(expense.getDescription());
+            activity.setPerformedBy(
+                    expense.getCreatedBy());
+            activity.setExpenseDescription(
+                    expense.getDescription());
             activity.setAmount(expense.getAmount());
-            activity.setYourShare(yourShare);
-            activity.setYourBalance(yourBalance);
-            activity.setGroupName(expense.getGroup() != null
-                    ? expense.getGroup().getName() : null);
-            activity.setOriginalGroupId(expense.getGroup() != null
-                    ? expense.getGroup().getId() : null);
+            activity.setGroupName(
+                    expense.getGroup() != null
+                    ? expense.getGroup().getName()
+                    : null);
+            activity.setOriginalGroupId(
+                    expense.getGroup() != null
+                    ? expense.getGroup().getId()
+                    : null);
             activity.setDescription(
                     "{performer} added \"{expense}\"" +
                     (expense.getGroup() != null
-                            ? " in " + expense.getGroup().getName()
-                            : "")
-            );
+                    ? " in \"" +
+                      expense.getGroup().getName()
+                      + "\""
+                    : ""));
 
             if (expense.getGroup() != null) {
-                groupRepository.findById(expense.getGroup().getId())
+                groupRepository.findById(
+                        expense.getGroup().getId())
                         .ifPresent(activity::setGroup);
             }
 
-            Activity saved = activityRepository.save(activity);
+            Activity saved =
+                    activityRepository.save(activity);
 
-            // Save who can see this activity
-            List<String> visibleTo = new ArrayList<>();
-            // Add all split members
+            // ── Build visibleTo list ──
+            List<String> visibleTo =
+                    new ArrayList<>();
+
+            // Add creator
+            if (!visibleTo.contains(currentUserId)) {
+                visibleTo.add(currentUserId);
+            }
+
+            // Add payer
+            if (expense.getPaidBy() != null) {
+                String payerId =
+                        expense.getPaidBy().getId();
+                if (!visibleTo.contains(payerId)) {
+                    visibleTo.add(payerId);
+                }
+            }
+
+            // Add split user IDs from request
+            splitUserIds.forEach(uid -> {
+                if (!visibleTo.contains(uid)) {
+                    visibleTo.add(uid);
+                }
+            });
+
+            // Add from loaded splits too
             if (expense.getSplits() != null) {
-                expense.getSplits().forEach(s ->
-                        visibleTo.add(s.getUser().getId()));
-            }
-            // Add payer if not already included
-            if (expense.getPaidBy() != null &&
-                    !visibleTo.contains(expense.getPaidBy().getId())) {
-                visibleTo.add(expense.getPaidBy().getId());
-            }
-            // Add creator if not already included
-            if (expense.getCreatedBy() != null &&
-                    !visibleTo.contains(expense.getCreatedBy().getId())) {
-                visibleTo.add(expense.getCreatedBy().getId());
+                expense.getSplits().forEach(s -> {
+                    String uid =
+                            s.getUser().getId();
+                    if (!visibleTo.contains(uid)) {
+                        visibleTo.add(uid);
+                    }
+                });
             }
 
-            saveActivityMembers(saved, visibleTo);
+            // Group members fallback
+            if (visibleTo.size() <= 1 &&
+                    expense.getGroup() != null) {
+                groupRepository.findByIdWithMembers(
+                        expense.getGroup().getId())
+                        .ifPresent(g ->
+                            g.getMembers()
+                             .forEach(m -> {
+                                if (!visibleTo
+                                    .contains(
+                                        m.getId())) {
+                                    visibleTo.add(
+                                        m.getId());
+                                }
+                            }));
+            }
+
+            // ── Save personalized balance per user ──
+            String paidById =
+                    expense.getPaidBy() != null
+                    ? expense.getPaidBy().getId()
+                    : currentUserId;
+
+            BigDecimal total = expense.getAmount();
+
+	         // Build a map of userId → splitAmount
+	         // from splitUserIds and splits for accuracy
+	         java.util.Map<String, BigDecimal> splitAmountMap =
+	                 new java.util.HashMap<>();
+	
+	         // From loaded splits
+	         if (expense.getSplits() != null) {
+	             expense.getSplits().forEach(split ->
+	                 splitAmountMap.put(
+	                     split.getUser().getId(),
+	                     split.getAmount())
+	             );
+	         }
+	
+	         // From request splits if not loaded
+	         if (splitAmountMap.isEmpty() &&
+	                 !splitUserIds.isEmpty()) {
+	             // Try to get from request body splits
+	             // They are equal split so divide equally
+	             if (!splitUserIds.isEmpty()) {
+	                 BigDecimal equalShare = total.divide(
+	                     new BigDecimal(splitUserIds.size()),
+	                     2, java.math.RoundingMode.HALF_UP);
+	                 splitUserIds.forEach(uid ->
+	                     splitAmountMap.put(uid, equalShare));
+	             }
+	         }
+	
+	         System.out.println("Split amount map: "
+	                 + splitAmountMap);
+	
+	         for (String uid : visibleTo) {
+	             BigDecimal myShare = splitAmountMap
+	                     .getOrDefault(uid, BigDecimal.ZERO);
+	
+	             BigDecimal myBalance;
+	             if (uid.equals(paidById)) {
+	                 // This user paid
+	                 // → lent = total - own share
+	                 myBalance = total.subtract(myShare);
+	             } else {
+	                 // This user owes their share
+	                 myBalance = myShare.negate();
+	             }
+	
+	             System.out.println("User: " + uid
+	                     + " share: " + myShare
+	                     + " balance: " + myBalance);
+	
+	             ActivityMember am =
+	                     new ActivityMember(
+	                             saved, uid,
+	                             myBalance, myShare);
+	             activityMemberRepository.save(am);
+	         }
+
+            System.out.println(
+                    "Expense activity saved for: "
+                    + visibleTo);
 
         } catch (Exception e) {
-            System.err.println("Failed to log expense added: "
+            System.err.println(
+                    "Failed to log expense added: "
                     + e.getMessage());
+            e.printStackTrace();
         }
     }
 
+    // ════════════════════════════════════════
+    // ── Log expense added (original) ──
+    // ════════════════════════════════════════
+    @Transactional(propagation =
+            Propagation.REQUIRES_NEW)
+    public void logExpenseAdded(
+            Expense expense,
+            String currentUserId) {
+        // Delegate to the detailed method
+        // with empty splitUserIds
+        logExpenseAddedWithUsers(
+                expense,
+                currentUserId,
+                new ArrayList<>());
+    }
+
+    // ════════════════════════════════════════
     // ── Log expense updated ──
-    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    // ════════════════════════════════════════
+    @Transactional(propagation =
+            Propagation.REQUIRES_NEW)
     public void logExpenseUpdated(Expense expense) {
         try {
             Activity activity = new Activity();
             activity.setType("EXPENSE_UPDATED");
-            activity.setPerformedBy(expense.getCreatedBy());
-            activity.setExpenseDescription(expense.getDescription());
+            activity.setPerformedBy(
+                    expense.getCreatedBy());
+            activity.setExpenseDescription(
+                    expense.getDescription());
             activity.setAmount(expense.getAmount());
-            activity.setGroupName(expense.getGroup() != null
-                    ? expense.getGroup().getName() : null);
-            activity.setOriginalGroupId(expense.getGroup() != null
-                    ? expense.getGroup().getId() : null);
+            activity.setGroupName(
+                    expense.getGroup() != null
+                    ? expense.getGroup().getName()
+                    : null);
+            activity.setOriginalGroupId(
+                    expense.getGroup() != null
+                    ? expense.getGroup().getId()
+                    : null);
             activity.setDescription(
-                    "{performer} updated \"{expense}\"" +
+                    "{performer} updated " +
+                    "\"{expense}\"" +
                     (expense.getGroup() != null
-                            ? " in " + expense.getGroup().getName()
-                            : "")
-            );
+                    ? " in \"" +
+                      expense.getGroup().getName()
+                      + "\""
+                    : ""));
 
             if (expense.getGroup() != null) {
-                groupRepository.findById(expense.getGroup().getId())
+                groupRepository.findById(
+                        expense.getGroup().getId())
                         .ifPresent(activity::setGroup);
             }
 
-            Activity saved = activityRepository.save(activity);
+            Activity saved =
+                    activityRepository.save(activity);
 
-            // Save members who can see this
-            List<String> visibleTo = new ArrayList<>();
-            if (expense.getSplits() != null) {
-                expense.getSplits().forEach(s ->
-                        visibleTo.add(s.getUser().getId()));
+            List<String> visibleTo =
+                    new ArrayList<>();
+
+            // Creator first
+            if (expense.getCreatedBy() != null) {
+                visibleTo.add(
+                        expense.getCreatedBy()
+                                .getId());
             }
-            if (expense.getCreatedBy() != null &&
+
+            // Payer
+            if (expense.getPaidBy() != null &&
                     !visibleTo.contains(
-                            expense.getCreatedBy().getId())) {
-                visibleTo.add(expense.getCreatedBy().getId());
+                        expense.getPaidBy().getId())) {
+                visibleTo.add(
+                        expense.getPaidBy().getId());
             }
 
-            saveActivityMembers(saved, visibleTo);
+            // Split members
+            if (expense.getSplits() != null) {
+                expense.getSplits().forEach(s -> {
+                    String uid =
+                            s.getUser().getId();
+                    if (!visibleTo.contains(uid)) {
+                        visibleTo.add(uid);
+                    }
+                });
+            }
+
+            // Group fallback
+            if (visibleTo.size() <= 1 &&
+                    expense.getGroup() != null) {
+                groupRepository.findByIdWithMembers(
+                        expense.getGroup().getId())
+                        .ifPresent(g ->
+                            g.getMembers()
+                             .forEach(m -> {
+                                if (!visibleTo
+                                    .contains(
+                                        m.getId())) {
+                                    visibleTo.add(
+                                        m.getId());
+                                }
+                            }));
+            }
+
+            if (!visibleTo.isEmpty()) {
+                saveActivityMembers(saved, visibleTo);
+            }
 
         } catch (Exception e) {
-            System.err.println("Failed to log expense updated: "
+            System.err.println(
+                    "Failed to log expense updated: "
                     + e.getMessage());
         }
     }
 
+    // ════════════════════════════════════════
     // ── Log expense deleted ──
-    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    // ════════════════════════════════════════
+    @Transactional(propagation =
+            Propagation.REQUIRES_NEW)
     public void logExpenseDeleted(Expense expense) {
         try {
             Activity activity = new Activity();
             activity.setType("EXPENSE_DELETED");
-            activity.setPerformedBy(expense.getCreatedBy());
-            activity.setExpenseDescription(expense.getDescription());
+            activity.setPerformedBy(
+                    expense.getCreatedBy());
+            activity.setExpenseDescription(
+                    expense.getDescription());
             activity.setAmount(expense.getAmount());
-            activity.setGroupName(expense.getGroup() != null
-                    ? expense.getGroup().getName() : null);
+            activity.setGroupName(
+                    expense.getGroup() != null
+                    ? expense.getGroup().getName()
+                    : null);
             activity.setDescription(
-                    "{performer} deleted \"{expense}\""
-            );
+                    "{performer} deleted " +
+                    "\"{expense}\"");
 
-            Activity saved = activityRepository.save(activity);
+            Activity saved =
+                    activityRepository.save(activity);
 
-            // Save members
-            List<String> visibleTo = new ArrayList<>();
-            if (expense.getSplits() != null) {
-                expense.getSplits().forEach(s ->
-                        visibleTo.add(s.getUser().getId()));
+            List<String> visibleTo =
+                    new ArrayList<>();
+
+            // Creator first
+            if (expense.getCreatedBy() != null) {
+                visibleTo.add(
+                        expense.getCreatedBy()
+                                .getId());
             }
-            if (expense.getCreatedBy() != null &&
+
+            // Payer
+            if (expense.getPaidBy() != null &&
                     !visibleTo.contains(
-                            expense.getCreatedBy().getId())) {
-                visibleTo.add(expense.getCreatedBy().getId());
+                        expense.getPaidBy().getId())) {
+                visibleTo.add(
+                        expense.getPaidBy().getId());
             }
 
-            saveActivityMembers(saved, visibleTo);
+            // Split members
+            if (expense.getSplits() != null) {
+                expense.getSplits().forEach(s -> {
+                    String uid =
+                            s.getUser().getId();
+                    if (!visibleTo.contains(uid)) {
+                        visibleTo.add(uid);
+                    }
+                });
+            }
+
+            // Group fallback
+            if (visibleTo.size() <= 1 &&
+                    expense.getGroup() != null) {
+                groupRepository.findByIdWithMembers(
+                        expense.getGroup().getId())
+                        .ifPresent(g ->
+                            g.getMembers()
+                             .forEach(m -> {
+                                if (!visibleTo
+                                    .contains(
+                                        m.getId())) {
+                                    visibleTo.add(
+                                        m.getId());
+                                }
+                            }));
+            }
+
+            if (!visibleTo.isEmpty()) {
+                saveActivityMembers(saved, visibleTo);
+            }
 
         } catch (Exception e) {
-            System.err.println("Failed to log expense deleted: "
+            System.err.println(
+                    "Failed to log expense deleted: "
                     + e.getMessage());
         }
     }
 
+    // ════════════════════════════════════════
     // ── Log group created ──
-    @Transactional(propagation = Propagation.REQUIRES_NEW)
-    public void logGroupCreated(String groupId, String groupName,
-                                User creator) {
+    // ════════════════════════════════════════
+    @Transactional(propagation =
+            Propagation.REQUIRES_NEW)
+    public void logGroupCreated(
+            String groupId,
+            String groupName,
+            User creator) {
         try {
             Activity activity = new Activity();
             activity.setType("GROUP_CREATED");
@@ -267,31 +530,39 @@ public class ActivityService {
             activity.setGroupName(groupName);
             activity.setOriginalGroupId(groupId);
             activity.setDescription(
-                    "{performer} created group \"" + groupName + "\""
-            );
+                    "{performer} created group \""
+                    + groupName + "\"");
 
             groupRepository.findById(groupId)
                     .ifPresent(activity::setGroup);
 
-            Activity saved = activityRepository.save(activity);
+            Activity saved =
+                    activityRepository.save(activity);
 
-            // All group members can see this
-            List<String> memberIds = getGroupMemberIds(groupId);
-            if (!memberIds.contains(creator.getId())) {
+            List<String> memberIds =
+                    getGroupMemberIds(groupId);
+            if (!memberIds.contains(
+                    creator.getId())) {
                 memberIds.add(creator.getId());
             }
             saveActivityMembers(saved, memberIds);
 
         } catch (Exception e) {
-            System.err.println("Failed to log group created: "
+            System.err.println(
+                    "Failed to log group created: "
                     + e.getMessage());
         }
     }
 
+    // ════════════════════════════════════════
     // ── Log group deleted ──
-    @Transactional(propagation = Propagation.REQUIRES_NEW)
-    public void logGroupDeletedWithId(String groupId, String groupName,
-                                      User deletedBy) {
+    // ════════════════════════════════════════
+    @Transactional(propagation =
+            Propagation.REQUIRES_NEW)
+    public void logGroupDeletedWithId(
+            String groupId,
+            String groupName,
+            User deletedBy) {
         try {
             Activity activity = new Activity();
             activity.setType("GROUP_DELETED");
@@ -299,89 +570,110 @@ public class ActivityService {
             activity.setGroupName(groupName);
             activity.setOriginalGroupId(groupId);
             activity.setDescription(
-                    "{performer} deleted group \"" + groupName + "\""
-            );
-            // Don't set group FK — it's about to be deleted
+                    "{performer} deleted group \""
+                    + groupName + "\"");
 
-            Activity saved = activityRepository.save(activity);
+            Activity saved =
+                    activityRepository.save(activity);
 
-            // ── Save ALL group members BEFORE group is deleted ──
-            // This is the key fix — we store who was in the group
-            // right now, before the delete happens
-            List<String> memberIds = getGroupMemberIds(groupId);
-            if (!memberIds.contains(deletedBy.getId())) {
+            List<String> memberIds =
+                    getGroupMemberIds(groupId);
+            if (!memberIds.contains(
+                    deletedBy.getId())) {
                 memberIds.add(deletedBy.getId());
             }
             saveActivityMembers(saved, memberIds);
 
         } catch (Exception e) {
-            System.err.println("Failed to log group deleted: "
+            System.err.println(
+                    "Failed to log group deleted: "
                     + e.getMessage());
         }
     }
 
     // Keep old method for compatibility
-    @Transactional(propagation = Propagation.REQUIRES_NEW)
-    public void logGroupDeleted(String groupName, User deletedBy) {
+    @Transactional(propagation =
+            Propagation.REQUIRES_NEW)
+    public void logGroupDeleted(
+            String groupName,
+            User deletedBy) {
         try {
             Activity activity = new Activity();
             activity.setType("GROUP_DELETED");
             activity.setPerformedBy(deletedBy);
             activity.setGroupName(groupName);
             activity.setDescription(
-                    "{performer} deleted group \"" + groupName + "\""
-            );
-            Activity saved = activityRepository.save(activity);
+                    "{performer} deleted group \""
+                    + groupName + "\"");
+            Activity saved =
+                    activityRepository.save(activity);
             saveActivityMembers(saved,
                     List.of(deletedBy.getId()));
         } catch (Exception e) {
-            System.err.println("Failed to log group deleted: "
+            System.err.println(
+                    "Failed to log group deleted: "
                     + e.getMessage());
         }
     }
 
+    // ════════════════════════════════════════
     // ── Log member added ──
-    @Transactional(propagation = Propagation.REQUIRES_NEW)
-    public void logMemberAdded(String groupId, String groupName,
-                               User addedBy, User newMember) {
+    // ════════════════════════════════════════
+    @Transactional(propagation =
+            Propagation.REQUIRES_NEW)
+    public void logMemberAdded(
+            String groupId,
+            String groupName,
+            User addedBy,
+            User newMember) {
         try {
             Activity activity = new Activity();
             activity.setType("MEMBER_ADDED");
             activity.setPerformedBy(addedBy);
             activity.setGroupName(groupName);
-            activity.setTargetUserName(newMember.getName());
-            activity.setTargetUserId(newMember.getId());
+            activity.setTargetUserName(
+                    newMember.getName());
+            activity.setTargetUserId(
+                    newMember.getId());
             activity.setOriginalGroupId(groupId);
             activity.setDescription(
                     "{performer} added {target} to \""
-                    + groupName + "\""
-            );
+                    + groupName + "\"");
 
             groupRepository.findById(groupId)
                     .ifPresent(activity::setGroup);
 
-            Activity saved = activityRepository.save(activity);
+            Activity saved =
+                    activityRepository.save(activity);
 
-            // All current group members + new member can see this
-            List<String> memberIds = getGroupMemberIds(groupId);
-            if (!memberIds.contains(newMember.getId())) {
+            List<String> memberIds =
+                    getGroupMemberIds(groupId);
+            if (!memberIds.contains(
+                    newMember.getId())) {
                 memberIds.add(newMember.getId());
             }
-            if (!memberIds.contains(addedBy.getId())) {
+            if (!memberIds.contains(
+                    addedBy.getId())) {
                 memberIds.add(addedBy.getId());
             }
             saveActivityMembers(saved, memberIds);
 
         } catch (Exception e) {
-            System.err.println("Failed to log member added: "
+            System.err.println(
+                    "Failed to log member added: "
                     + e.getMessage());
         }
     }
 
+    // ════════════════════════════════════════
     // ── Log member left ──
-    @Transactional(propagation = Propagation.REQUIRES_NEW)
-    public void logMemberLeft(String groupId, String groupName,
-                              User member) {
+    // ════════════════════════════════════════
+    @Transactional(propagation =
+            Propagation.REQUIRES_NEW)
+    public void logMemberLeft(
+            String groupId,
+            String groupName,
+            User member) {
         try {
             Activity activity = new Activity();
             activity.setType("MEMBER_LEFT");
@@ -389,75 +681,89 @@ public class ActivityService {
             activity.setGroupName(groupName);
             activity.setOriginalGroupId(groupId);
             activity.setDescription(
-                    "{performer} left group \"" + groupName + "\""
-            );
+                    "{performer} left group \""
+                    + groupName + "\"");
 
             groupRepository.findById(groupId)
                     .ifPresent(activity::setGroup);
 
-            Activity saved = activityRepository.save(activity);
+            Activity saved =
+                    activityRepository.save(activity);
 
-            // All current members + the leaving member can see this
-            List<String> memberIds = getGroupMemberIds(groupId);
-            if (!memberIds.contains(member.getId())) {
+            List<String> memberIds =
+                    getGroupMemberIds(groupId);
+            if (!memberIds.contains(
+                    member.getId())) {
                 memberIds.add(member.getId());
             }
             saveActivityMembers(saved, memberIds);
 
         } catch (Exception e) {
-            System.err.println("Failed to log member left: "
+            System.err.println(
+                    "Failed to log member left: "
                     + e.getMessage());
         }
     }
 
+    // ════════════════════════════════════════
     // ── Log settlement ──
-    @Transactional(propagation = Propagation.REQUIRES_NEW)
-    public void logSettlement(Settlement settlement) {
+    // ════════════════════════════════════════
+    @Transactional(propagation =
+            Propagation.REQUIRES_NEW)
+    public void logSettlement(
+            Settlement settlement) {
         try {
             Activity activity = new Activity();
             activity.setType("SETTLEMENT");
-            activity.setPerformedBy(settlement.getPayer());
-            activity.setAmount(settlement.getAmount());
-            activity.setTargetUserName(settlement.getPayee().getName());
-            activity.setTargetUserId(settlement.getPayee().getId());
+            activity.setPerformedBy(
+                    settlement.getPayer());
+            activity.setAmount(
+                    settlement.getAmount());
+            activity.setTargetUserName(
+                    settlement.getPayee().getName());
+            activity.setTargetUserId(
+                    settlement.getPayee().getId());
 
-            // Include group name if settlement is in a group
-            String groupName = settlement.getGroup() != null
-                    ? settlement.getGroup().getName() : null;
+            String groupName =
+                    settlement.getGroup() != null
+                    ? settlement.getGroup().getName()
+                    : null;
             activity.setGroupName(groupName);
             activity.setOriginalGroupId(
                     settlement.getGroup() != null
-                            ? settlement.getGroup().getId() : null);
-
+                    ? settlement.getGroup().getId()
+                    : null);
             activity.setDescription(
-                    "{performer} paid {target} " +
-                    formatAmount(settlement.getAmount()) +
-                    (groupName != null ? " in " + groupName : "")
-            );
+                    "{performer} paid {target} ₹" +
+                    settlement.getAmount()
+                    .setScale(0,
+                        java.math.RoundingMode
+                            .HALF_UP)
+                    .toPlainString() +
+                    (groupName != null
+                    ? " in \"" + groupName + "\""
+                    : ""));
 
-            // Set group reference
             if (settlement.getGroup() != null) {
                 groupRepository.findById(
                         settlement.getGroup().getId())
                         .ifPresent(activity::setGroup);
             }
 
-            Activity saved = activityRepository.save(activity);
+            Activity saved =
+                    activityRepository.save(activity);
 
-            // Both payer and payee see this activity
-            saveActivityMembers(saved, List.of(
-                    settlement.getPayer().getId(),
-                    settlement.getPayee().getId()
-            ));
+            // Both payer and payee see settlement
+            saveActivityMembers(saved,
+                    List.of(
+                        settlement.getPayer().getId(),
+                        settlement.getPayee().getId()
+                    ));
 
         } catch (Exception e) {
-            System.err.println("Failed to log settlement: "
+            System.err.println(
+                    "Failed to log settlement: "
                     + e.getMessage());
         }
-    }
-
-    private String formatAmount(BigDecimal amount) {
-        return "₹" + amount.setScale(0,
-                java.math.RoundingMode.HALF_UP).toPlainString();
     }
 }

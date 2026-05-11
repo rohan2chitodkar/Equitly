@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo } from 'react'
 import { NavLink, useNavigate, useLocation } from 'react-router-dom'
 import { useApp } from '../../context/AppContext'
+import { useAuth} from '../../context/AuthContext'
 import { formatCurrency, getInitials } from '../../utils/formatCurrency'
 import Modal from '../common/Modal'
 import styles from './Sidebar.module.css'
@@ -24,6 +25,7 @@ export default function Sidebar() {
     const [saving, setSaving] = useState(false)
     const [groupsOpen, setGroupsOpen] = useState(true)
     const [friendsOpen, setFriendsOpen] = useState(true)
+    const { user } = useAuth()
 
     useEffect(() => {
         fetchGroups()
@@ -43,12 +45,13 @@ export default function Sidebar() {
             })
         }
 
-        // Add group members from all groups
+        // Add group members
         if (Array.isArray(groups)) {
             groups.forEach(group => {
                 if (Array.isArray(group.members)) {
                     group.members.forEach(m => {
-                        if (m && m.id && !peopleMap.has(m.id)) {
+                        if (m && m.id &&
+                                !peopleMap.has(m.id)) {
                             peopleMap.set(m.id, m)
                         }
                     })
@@ -56,8 +59,17 @@ export default function Sidebar() {
             })
         }
 
+        // Remove current user
+        if (user?.id) {
+            peopleMap.delete(user.id)
+        }
+
+        // ── Sort alphabetically by name to keep order stable ──
         return Array.from(peopleMap.values())
-    }, [friends, groups])
+            .sort((a, b) =>
+                (a.name || '').localeCompare(b.name || ''))
+
+    }, [friends, groups, user])
 
     const totalOwed = balances
         .filter(b => parseFloat(b.netAmount) > 0)
@@ -245,39 +257,31 @@ export default function Sidebar() {
                                 </div>
                             )}
 
-                            {/* Invite Friend */}
-                            <button
-                                className={styles.inviteBtn}
-                                onClick={() => setShowInvite(true)}
-                            >
-                                <span className={styles.inviteIcon}>
-                                    ✉
-                                </span>
-                                Invite a Friend
-                            </button>
+                            {/* Invite Friends box */}
+                            <div className={styles.inviteBox}>
+                                <div className={styles.inviteBoxTitle}>
+                                    Invite friends
+                                </div>
+                                <input
+                                    className={styles.inviteInput}
+                                    type="email"
+                                    placeholder="Enter an email address"
+                                    value={inviteEmail}
+                                    onChange={e =>
+                                        setInviteEmail(e.target.value)}
+                                    onKeyDown={e =>
+                                        e.key === 'Enter' && handleInvite()}
+                                />
+                                <button
+                                    className={styles.inviteBoxBtn}
+                                    onClick={handleInvite}
+                                    disabled={saving}
+                                >
+                                    {saving ? 'Sending…' : 'Send invite'}
+                                </button>
+                            </div>
                         </div>
                     )}
-                </div>
-
-                {/* ── Balance Card ── */}
-                <div className={styles.balanceCard}>
-                    <div className={styles.balanceLabel}>
-                        Your Balance
-                    </div>
-                    <div className={styles.balanceRow}>
-                        <span className={styles.lbl}>
-                            You are owed
-                        </span>
-                        <span className={styles.pos}>
-                            {formatCurrency(totalOwed)}
-                        </span>
-                    </div>
-                    <div className={styles.balanceRow}>
-                        <span className={styles.lbl}>You owe</span>
-                        <span className={styles.neg}>
-                            {formatCurrency(totalOwe)}
-                        </span>
-                    </div>
                 </div>
 
             </aside>

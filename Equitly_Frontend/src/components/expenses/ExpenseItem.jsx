@@ -1,58 +1,169 @@
+import { useState } from 'react'
 import { useAuth } from '../../context/AuthContext'
-import { formatCurrency, formatDate, CATEGORY_EMOJI, CATEGORY_COLORS } from '../../utils/formatCurrency'
+import {
+    formatCurrency,
+    CATEGORY_EMOJI,
+    CATEGORY_COLORS
+} from '../../utils/formatCurrency'
+import ReceiptModal from './ReceiptModal'
 import styles from './ExpenseItem.module.css'
 
-export default function ExpenseItem({ expense, onEdit, onDelete }) {
-  const { user } = useAuth()
+export default function ExpenseItem({
+    expense,
+    onEdit,
+    onDelete,
+    onUpdate
+}) {
+    const { user } = useAuth()
+    const [showReceipt, setShowReceipt] =
+        useState(false)
 
-  const myId = user?.id
-  const paidByMe = expense.paidBy?.id === myId
-  const mySplit = expense.splits?.find(s =>
-    s.userId === myId || s.user?.id === myId
-  )
-  const myShare = mySplit?.amount || 0
-  const totalPaid = expense.amount
+    const myId = String(user?.id || '')
 
-  let splitLabel = ''
-  let splitClass = styles.neutral
-  if (paidByMe && myShare < totalPaid) {
-    const owed = totalPaid - myShare
-    splitLabel = `you lent ${formatCurrency(owed)}`
-    splitClass = styles.pos
-  } else if (!paidByMe && myShare > 0) {
-    splitLabel = `you owe ${formatCurrency(myShare)}`
-    splitClass = styles.neg
-  } else if (paidByMe && myShare === totalPaid) {
-    splitLabel = 'not involved'
-    splitClass = styles.neutral
-  } else {
-    splitLabel = 'you paid'
-    splitClass = styles.pos
-  }
+    // ── Check if current user can edit/delete ──
+    const canModify =
+        String(expense.createdBy?.id || '')
+            === myId ||
+        String(expense.paidBy?.id || '')
+            === myId
 
-  const emoji = CATEGORY_EMOJI[expense.category] || '📌'
-  const bg = CATEGORY_COLORS[expense.category] || '#f5f4f0'
+    // ── Split label ──
+    const paidByMe =
+        String(expense.paidBy?.id || '') === myId
+    const total = parseFloat(expense.amount || 0)
 
-  return (
-    <div className={styles.item}>
-      <div className={styles.icon} style={{ background: bg }}>{emoji}</div>
-      <div className={styles.info}>
-        <div className={styles.title}>{expense.description}</div>
-        <div className={styles.meta}>
-          {expense.paidBy?.name} · {formatDate(expense.createdAt)}
-          {expense.group && ` · ${expense.group.name}`}
-        </div>
-      </div>
-      <div className={styles.right}>
-        <div className={styles.total}>{formatCurrency(expense.amount)}</div>
-        <div className={`${styles.split} ${splitClass}`}>{splitLabel}</div>
-      </div>
-      {(onEdit || onDelete) && (
-        <div className={styles.actions}>
-          {onEdit && <button className={styles.actionBtn} onClick={() => onEdit(expense)} title="Edit">✏️</button>}
-          {onDelete && <button className={styles.actionBtn} onClick={() => onDelete(expense.id)} title="Delete">🗑️</button>}
-        </div>
-      )}
-    </div>
-  )
+    const mySplit = expense.splits?.find(s =>
+        String(s.userId || '') === myId ||
+        String(s.user?.id || '') === myId
+    )
+    const myShare = parseFloat(
+        mySplit?.amount || 0)
+
+    let splitLabel = ''
+    let splitType = 'neutral'
+    let splitAmount = ''
+
+    if (paidByMe) {
+        const lent = total - myShare
+        if (lent > 0.01) {
+            splitLabel = 'you lent'
+            splitType = 'lent'
+            splitAmount = formatCurrency(lent)
+        }
+    } else if (myShare > 0.01) {
+        splitLabel = 'you borrowed'
+        splitType = 'borrowed'
+        splitAmount = formatCurrency(myShare)
+    }
+
+    const emoji = CATEGORY_EMOJI[
+        expense.category] || '📌'
+    const bg = CATEGORY_COLORS[
+        expense.category] || '#f5f4f0'
+    const hasReceipt = !!expense.receiptFilename
+
+    return (
+        <>
+            <div className={styles.item}>
+
+                {/* Category icon */}
+                <div
+                    className={styles.icon}
+                    style={{ background: bg }}
+                >
+                    {emoji}
+                </div>
+
+                {/* Info */}
+                <div className={styles.info}>
+                    <div className={styles.title}>
+                        {expense.description}
+                    </div>
+                    <div className={styles.meta}>
+                        {expense.paidBy?.id === user?.id
+                            ? 'you'
+                            : expense.paidBy?.name
+                        } paid{' '}
+                        {formatCurrency(expense.amount)}
+                    </div>
+                </div>
+
+                {/* Split label */}
+                <div className={styles.split}>
+                    {splitType !== 'neutral' && (
+                        <>
+                            <div className={
+                                splitType === 'lent'
+                                    ? styles.lentLabel
+                                    : styles.borrowedLabel
+                            }>
+                                {splitLabel}
+                            </div>
+                            <div className={
+                                splitType === 'lent'
+                                    ? styles.lentAmt
+                                    : styles.borrowedAmt
+                            }>
+                                {splitAmount}
+                            </div>
+                        </>
+                    )}
+                </div>
+
+                {/* Actions */}
+                <div className={styles.actions}>
+                    {/* Receipt button */}
+                    <button
+                        className={`${styles.actionBtn} ${hasReceipt
+                            ? styles.receiptActive
+                            : ''}`}
+                        onClick={() =>
+                            setShowReceipt(true)}
+                        title={hasReceipt
+                            ? 'View receipt'
+                            : 'Add receipt'}
+                    >
+                        {hasReceipt ? '🧾' : '📷'}
+                    </button>
+
+                    {/* Edit — only for creator/payer */}
+                    {canModify && onEdit && (
+                        <button
+                            className={styles.actionBtn}
+                            onClick={() =>
+                                onEdit(expense)}
+                            title="Edit expense"
+                        >
+                            ✏️
+                        </button>
+                    )}
+
+                    {/* Delete — only for creator/payer */}
+                    {canModify && onDelete && (
+                        <button
+                            className={`${styles.actionBtn} ${styles.deleteBtn}`}
+                            onClick={() =>
+                                onDelete(expense.id)}
+                            title="Delete expense"
+                        >
+                            🗑️
+                        </button>
+                    )}
+                </div>
+            </div>
+
+            {/* Receipt Modal */}
+            {showReceipt && (
+                <ReceiptModal
+                    expense={expense}
+                    onClose={() =>
+                        setShowReceipt(false)}
+                    onUpdate={() => {
+                        if (onUpdate) onUpdate()
+                        setShowReceipt(false)
+                    }}
+                />
+            )}
+        </>
+    )
 }

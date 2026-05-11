@@ -269,3 +269,57 @@
     cursor: pointer;
     color: var(--text);
 }
+
+/* ── Invite Friends Box ── */
+.inviteBox {
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    overflow: hidden;
+    margin: 12px 8px;
+}
+
+.inviteBoxTitle {
+    background: var(--accent);
+    color: #fff;
+    font-size: 13px;
+    font-weight: 600;
+    padding: 10px 14px;
+}
+
+.inviteInput {
+    width: 100%;
+    padding: 9px 12px;
+    border: none;
+    border-bottom: 1px solid var(--border);
+    font-family: var(--font);
+    font-size: 13px;
+    background: var(--bg);
+    color: var(--text);
+    outline: none;
+}
+.inviteInput:focus {
+    background: var(--surface2);
+}
+.inviteInput::placeholder {
+    color: var(--text3);
+}
+
+.inviteBoxBtn {
+    width: 100%;
+    padding: 8px 14px;
+    background: var(--surface2);
+    border: none;
+    font-family: var(--font);
+    font-size: 13px;
+    color: var(--text);
+    cursor: pointer;
+    text-align: left;
+    transition: background 0.15s;
+}
+.inviteBoxBtn:hover {
+    background: var(--border);
+}
+.inviteBoxBtn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}

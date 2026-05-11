@@ -138,29 +138,47 @@ public class GroupService {
     }
 
     @Transactional
-    public void deleteGroup(String groupId, String currentUserId) {
+    public void deleteGroup(String groupId,
+                            String currentUserId) {
         Group group = getById(groupId, currentUserId);
 
-        if (!group.getCreatedBy().getId().equals(currentUserId))
+        if (!group.getCreatedBy().getId()
+                .equals(currentUserId))
             throw new RuntimeException(
                     "Only the group creator can delete it");
 
         if (!isGroupFullySettled(groupId))
             throw new RuntimeException(
-                    "Cannot delete group. All members must settle first.");
+                    "Cannot delete group. " +
+                    "All members must settle first.");
 
         String groupName = group.getName();
-        User deletedBy = userRepository.findById(currentUserId)
-                .orElseThrow();
+        User deletedBy = userRepository
+                .findById(currentUserId).orElseThrow();
 
         // ── Log BEFORE deleting ──
-        // This saves all member IDs in activity_members table
-        // So even after group is deleted, all members see this activity
+        // This saves activity_members while
+        // group_member_details still exists
         activityService.logGroupDeletedWithId(
                 groupId, groupName, deletedBy);
 
-        // Now delete the group
-        groupRepository.delete(group);
+        // ── Delete group ──
+        // CASCADE will handle:
+        // group_members → deleted
+        // group_member_details → deleted
+        // expenses.group_id → SET NULL
+        // settlements.group_id → SET NULL
+        // activities.group_id → SET NULL
+        try {
+            groupRepository.deleteById(groupId);
+        } catch (Exception e) {
+            System.err.println(
+                    "Failed to delete group: "
+                    + e.getMessage());
+            throw new RuntimeException(
+                    "Cannot delete group. Please run " +
+                    "the MySQL constraint fix script.");
+        }
     }
 
     @Transactional

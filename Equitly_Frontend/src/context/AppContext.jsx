@@ -33,11 +33,21 @@ export function AppProvider({ children }) {
   }, [])
 
   const addExpense = useCallback(async (payload) => {
-    const data = await expenseApi.create(payload)
-    setExpenses(prev => [data, ...prev])
-    await fetchBalances()
-    toast.success('Expense added!')
-    return data
+      try {
+          const data = await expenseApi.create(payload)
+          // Refresh everything after adding expense
+          await Promise.all([
+              fetchExpenses(),
+              fetchBalances()
+          ])
+          return data
+      } catch (err) {
+          toast.error(
+              err.response?.data?.message ||
+              'Failed to add expense'
+          )
+          throw err
+      }
   }, [])
 
   const updateExpense = useCallback(async (id, payload) => {

@@ -1,45 +1,106 @@
 .item {
-  display: flex;
-  align-items: center;
-  gap: 14px;
-  padding: 14px 0;
-  border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 0;
+    border-bottom: 1px solid var(--border);
 }
 .item:last-child { border-bottom: none; }
+
+/* Icon */
+.icon {
+    width: 38px;
+    height: 38px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 18px;
+    flex-shrink: 0;
+}
+
+/* Info */
+.info { flex: 1; min-width: 0; }
+.title {
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--text);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.meta {
+    font-size: 12px;
+    color: var(--text2);
+    margin-top: 2px;
+}
+
+/* Split */
+.split {
+    text-align: right;
+    flex-shrink: 0;
+    min-width: 80px;
+}
+.lentLabel {
+    font-size: 11px;
+    color: var(--accent);
+}
+.lentAmt {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--accent);
+}
+.borrowedLabel {
+    font-size: 11px;
+    color: var(--accent2);
+}
+.borrowedAmt {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--accent2);
+}
+
+/* Actions */
+.actions {
+    display: flex;
+    gap: 4px;
+    flex-shrink: 0;
+    opacity: 0;
+    transition: opacity 0.15s;
+}
 .item:hover .actions { opacity: 1; }
 
-.icon {
-  width: 42px;
-  height: 42px;
-  border-radius: 10px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 20px;
-  flex-shrink: 0;
-}
-.info { flex: 1; min-width: 0; }
-.title { font-size: 14px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.meta { font-size: 12px; color: var(--text2); margin-top: 2px; }
-
-.right { text-align: right; flex-shrink: 0; }
-.total { font-size: 14px; font-weight: 600; }
-.split { font-size: 12px; margin-top: 2px; }
-.pos { color: var(--accent); }
-.neg { color: var(--accent2); }
-.neutral { color: var(--text2); }
-
-.actions { display: flex; gap: 4px; opacity: 0; transition: opacity 0.15s; }
 .actionBtn {
-  width: 28px;
-  height: 28px;
-  border-radius: 6px;
-  border: 1px solid var(--border);
-  background: var(--surface);
-  cursor: pointer;
-  font-size: 13px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+    width: 30px;
+    height: 30px;
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--border);
+    background: var(--surface2);
+    cursor: pointer;
+    font-size: 13px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.15s;
 }
-.actionBtn:hover { background: var(--surface2); }
+.actionBtn:hover { background: var(--border); }
+
+.receiptActive {
+    background: var(--accent-light) !important;
+    border-color: var(--accent) !important;
+}
+
+.deleteBtn:hover {
+    background: var(--accent2-light) !important;
+    border-color: var(--accent2) !important;
+}
+
+/* Mobile — always show actions */
+@media (max-width: 768px) {
+    .actions { opacity: 1; }
+    .actionBtn {
+        width: 28px;
+        height: 28px;
+        font-size: 12px;
+    }
+}

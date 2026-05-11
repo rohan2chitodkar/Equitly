@@ -1,3 +1,67 @@
+.page {
+    max-width: 680px;
+    margin: 0 auto;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.title {
+    font-family: var(--font-display);
+    font-size: 24px;
+    font-weight: 700;
+    letter-spacing: -0.5px;
+    color: var(--text);
+}
+
+/* ── Loading ── */
+.loading {
+    text-align: center;
+    padding: 40px;
+    color: var(--text2);
+    font-size: 14px;
+}
+
+/* ── Empty ── */
+.empty {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 48px 24px;
+    text-align: center;
+}
+.emptyIcon {
+    font-size: 44px;
+    margin-bottom: 12px;
+}
+.emptyText {
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--text);
+    margin-bottom: 4px;
+}
+.emptySub {
+    font-size: 13px;
+    color: var(--text2);
+}
+
+/* ── Date group ── */
+.dateGroup {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.dateHeader {
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--text3);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    padding: 0 4px;
+}
+
+/* ── Card ── */
 .card {
     background: var(--surface);
     border: 1px solid var(--border);
@@ -5,42 +69,19 @@
     overflow: hidden;
 }
 
-.cardHeader {
-    padding: 18px 22px 14px;
-    border-bottom: 1px solid var(--border);
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-}
-
-.cardTitle {
-    font-family: var(--font-display);
-    font-size: 16px;
-    font-weight: 600;
-}
-
-.count {
-    font-size: 12px;
-    font-weight: 600;
-    background: var(--accent-light);
-    color: var(--accent);
-    padding: 3px 10px;
-    border-radius: 100px;
-    min-width: 28px;
-    text-align: center;
-}
-
-.cardBody { padding: 0 22px; }
-
+/* ── Row ── */
 .row {
     display: flex;
-    align-items: flex-start;
-    gap: 14px;
-    padding: 14px 0;
+    align-items: center;
+    gap: 12px;
+    padding: 14px 16px;
+}
+
+.rowBorder {
     border-bottom: 1px solid var(--border);
 }
-.row:last-child { border-bottom: none; }
 
+/* Icon */
 .icon {
     width: 40px;
     height: 40px;
@@ -50,93 +91,67 @@
     justify-content: center;
     font-size: 18px;
     flex-shrink: 0;
-    margin-top: 2px;
 }
 
+/* Content */
 .content {
     flex: 1;
     min-width: 0;
     display: flex;
     flex-direction: column;
-    gap: 4px;
+    gap: 3px;
 }
 
-.topRow {
-    display: flex;
-    align-items: flex-start;
-    justify-content: space-between;
-    gap: 12px;
-}
-
-.description {
+/* Description */
+.desc {
     font-size: 14px;
     font-weight: 500;
     color: var(--text);
     line-height: 1.4;
-    flex: 1;
 }
 
+/* Balance tags */
+.tagPos {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--accent);
+}
+
+.tagNeg {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--accent2);
+}
+
+/* Time */
+.time {
+    font-size: 11px;
+    color: var(--text3);
+    margin-top: 1px;
+}
+
+/* Amount */
 .amount {
     font-size: 14px;
     font-weight: 600;
     color: var(--text);
     flex-shrink: 0;
+    text-align: right;
 }
 
-.groupTag {
-    font-size: 12px;
-    color: var(--text2);
-    display: inline-flex;
-    align-items: center;
-    gap: 4px;
-}
+/* ── Mobile ── */
+@media (max-width: 768px) {
+    .row {
+        padding: 12px 14px;
+        gap: 10px;
+    }
 
-/* You get back — green */
-.tagPos {
-    display: inline-block;
-    font-size: 12px;
-    font-weight: 500;
-    color: var(--accent);
-    background: var(--accent-light);
-    padding: 2px 10px;
-    border-radius: 100px;
-    margin-top: 2px;
-}
+    .icon {
+        width: 36px;
+        height: 36px;
+        font-size: 16px;
+    }
 
-/* You owe — red */
-.tagNeg {
-    display: inline-block;
-    font-size: 12px;
-    font-weight: 500;
-    color: var(--accent2);
-    background: var(--accent2-light);
-    padding: 2px 10px;
-    border-radius: 100px;
-    margin-top: 2px;
-}
-
-.date {
-    font-size: 11px;
-    color: var(--text3);
-}
-
-.loading {
-    text-align: center;
-    padding: 32px;
-    color: var(--text2);
-    font-size: 14px;
-}
-
-.empty {
-    text-align: center;
-    padding: 40px 20px;
-    color: var(--text2);
-}
-.emptyIcon {
-    font-size: 38px;
-    margin-bottom: 12px;
-}
-.empty p {
-    font-size: 14px;
-    line-height: 1.6;
+    .desc { font-size: 13px; }
+    .amount { font-size: 13px; }
 }

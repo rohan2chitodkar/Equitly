@@ -1,60 +1,31 @@
 import { useEffect, useState } from 'react'
 import { activityApi } from '../api/activityApi'
 import styles from './Activity.module.css'
+import { useLocation } from 'react-router-dom'
 
 const TYPE_CONFIG = {
-    EXPENSE_ADDED: {
-        icon: '🧾',
-        bg: '#f0fdf4',
-        label: 'Expense Added'
-    },
-    EXPENSE_UPDATED: {
-        icon: '✏️',
-        bg: '#fef9e6',
-        label: 'Expense Updated'
-    },
-    EXPENSE_DELETED: {
-        icon: '🗑️',
-        bg: '#fdeee9',
-        label: 'Expense Deleted'
-    },
-    GROUP_CREATED: {
-        icon: '🏠',
-        bg: '#e8f4fd',
-        label: 'Group Created'
-    },
-    GROUP_DELETED: {
-        icon: '❌',
-        bg: '#fdeee9',
-        label: 'Group Deleted'
-    },
-    MEMBER_ADDED: {
-        icon: '👥',
-        bg: '#fdf4ff',
-        label: 'Member Added'
-    },
-    MEMBER_LEFT: {
-        icon: '🚪',
-        bg: '#fef5e6',
-        label: 'Member Left'
-    },
-    SETTLEMENT: {
-        icon: '💸',
-        bg: '#e6f4ed',
-        label: 'Settlement'
-    }
+    EXPENSE_ADDED:   { icon: '🛒', bg: '#f0fdf4' },
+    EXPENSE_UPDATED: { icon: '✏️', bg: '#fef9e6' },
+    EXPENSE_DELETED: { icon: '🗑️', bg: '#fdeee9' },
+    GROUP_CREATED:   { icon: '🏠', bg: '#e8f4fd' },
+    GROUP_DELETED:   { icon: '❌', bg: '#fdeee9' },
+    MEMBER_ADDED:    { icon: '👥', bg: '#fdf4ff' },
+    MEMBER_LEFT:     { icon: '🚪', bg: '#fef5e6' },
+    SETTLEMENT:      { icon: '💸', bg: '#e6f4ed' },
 }
 
 export default function Activity() {
     const [activities, setActivities] = useState([])
     const [loading, setLoading] = useState(true)
+    const location = useLocation()
 
     useEffect(() => {
         const load = async () => {
             setLoading(true)
             try {
                 const data = await activityApi.getAll()
-                setActivities(Array.isArray(data) ? data : [])
+                setActivities(
+                    Array.isArray(data) ? data : [])
             } catch {
                 setActivities([])
             } finally {
@@ -62,122 +33,204 @@ export default function Activity() {
             }
         }
         load()
-    }, [])
+    }, [location.key])
 
-    const formatDate = (dateStr) => {
+    // ── Format date and time ──
+    const formatDateTime = (dateStr) => {
         if (!dateStr) return ''
         const date = new Date(dateStr)
-        return date.toLocaleDateString('en-IN', {
-            month: 'short',
-            day: 'numeric',
-            year: 'numeric',
+        const now = new Date()
+        const diffDays = Math.floor(
+            (now - date) / (1000 * 60 * 60 * 24))
+
+        // Time string
+        const time = date.toLocaleTimeString('en-IN', {
             hour: '2-digit',
-            minute: '2-digit'
+            minute: '2-digit',
+            hour12: true
         })
+
+        // Date string
+        let dateLabel = ''
+        if (diffDays === 0) {
+            dateLabel = 'Today'
+        } else if (diffDays === 1) {
+            dateLabel = 'Yesterday'
+        } else {
+            dateLabel = date.toLocaleDateString('en-IN', {
+                month: 'short',
+                day: 'numeric',
+                year: date.getFullYear() !==
+                    now.getFullYear()
+                        ? 'numeric' : undefined
+            })
+        }
+
+        return { dateLabel, time }
     }
 
+    // ── Format currency ──
     const formatCurrency = (amount) => {
-        if (!amount) return ''
+        if (!amount && amount !== 0) return ''
         return new Intl.NumberFormat('en-IN', {
             style: 'currency',
             currency: 'INR',
-            minimumFractionDigits: 0,
+            minimumFractionDigits: 2,
             maximumFractionDigits: 2
         }).format(amount)
     }
 
+    // ── Get balance tag ──
     const getBalanceTag = (activity) => {
-        if (!activity.yourBalance &&
-            activity.type !== 'EXPENSE_ADDED') return null
+        if (activity.type !== 'EXPENSE_ADDED' &&
+            activity.type !== 'EXPENSE_UPDATED')
+            return null
 
-        const balance = parseFloat(activity.yourBalance || 0)
+        if (!activity.yourBalance &&
+            activity.yourBalance !== 0) return null
+
+        const balance = parseFloat(
+            activity.yourBalance || 0)
+
+        // If balance is exactly 0 — don't show tag
         if (Math.abs(balance) < 0.01) return null
 
         if (balance > 0) {
-            return (
-                <span className={styles.tagPos}>
-                    you get back {formatCurrency(balance)}
-                </span>
-            )
-        } else {
-            return (
-                <span className={styles.tagNeg}>
-                    you owe {formatCurrency(Math.abs(balance))}
-                </span>
-            )
+            return {
+                text: `You get back ${formatCurrency(
+                    balance)}`,
+                type: 'pos'
+            }
+        }
+
+        return {
+            text: `You owe ${formatCurrency(
+                Math.abs(balance))}`,
+            type: 'neg'
         }
     }
 
+    // ── Group activities by date ──
+    const groupByDate = (activities) => {
+        const groups = {}
+        activities.forEach(a => {
+            const dt = formatDateTime(a.createdAt)
+            const key = dt.dateLabel || 'Unknown'
+            if (!groups[key]) groups[key] = []
+            groups[key].push(a)
+        })
+        return groups
+    }
+
+    const groupedActivities = groupByDate(activities)
+
     return (
-        <div className={styles.card}>
-            <div className={styles.cardHeader}>
-                <h2 className={styles.cardTitle}>Recent Activity</h2>
-                {activities.length > 0 && (
-                    <span className={styles.count}>
-                        {activities.length}
-                    </span>
-                )}
-            </div>
-            <div className={styles.cardBody}>
-                {loading ? (
-                    <div className={styles.loading}>
-                        Loading activity…
+        <div className={styles.page}>
+            <h1 className={styles.title}>
+                Recent Activity
+            </h1>
+
+            {loading ? (
+                <div className={styles.loading}>
+                    Loading activity…
+                </div>
+            ) : activities.length === 0 ? (
+                <div className={styles.empty}>
+                    <div className={styles.emptyIcon}>
+                        📋
                     </div>
-                ) : activities.length === 0 ? (
-                    <div className={styles.empty}>
-                        <div className={styles.emptyIcon}>📋</div>
-                        <p>No activity yet. Start by creating a group
-                            or adding an expense!</p>
-                    </div>
-                ) : (
-                    activities.map(a => {
-                        const config = TYPE_CONFIG[a.type] ||
-                            TYPE_CONFIG.EXPENSE_ADDED
-                        return (
-                            <div key={a.id} className={styles.row}>
+                    <p className={styles.emptyText}>
+                        No activity yet.
+                    </p>
+                    <p className={styles.emptySub}>
+                        Start by creating a group
+                        or adding an expense!
+                    </p>
+                </div>
+            ) : (
+                Object.entries(groupedActivities)
+                    .map(([dateLabel, items]) => (
+                    <div
+                        key={dateLabel}
+                        className={styles.dateGroup}
+                    >
+                        {/* Date header */}
+                        <div className={
+                            styles.dateHeader}>
+                            {dateLabel}
+                        </div>
 
-                                {/* Icon */}
-                                <div
-                                    className={styles.icon}
-                                    style={{ background: config.bg }}
-                                >
-                                    {config.icon}
-                                </div>
+                        {/* Activity items */}
+                        <div className={styles.card}>
+                            {items.map((a, idx) => {
+                                const config =
+                                    TYPE_CONFIG[a.type]
+                                    || TYPE_CONFIG
+                                        .EXPENSE_ADDED
+                                const dt =
+                                    formatDateTime(
+                                        a.createdAt)
+                                const balTag =
+                                    getBalanceTag(a)
+                                const desc = a.description || ''
 
-                                {/* Content */}
-                                <div className={styles.content}>
-                                    <div className={styles.topRow}>
-                                        <span className={styles.description}>
-                                            {a.description}
-                                        </span>
-                                        {a.amount && (
-                                            <span className={styles.amount}>
-                                                {formatCurrency(a.amount)}
-                                            </span>
-                                        )}
-                                    </div>
-
-                                    {/* Group tag */}
-                                    {a.groupName && (
-                                        <div className={styles.groupTag}>
-                                            🏠 {a.groupName}
+                                return (
+                                    <div
+                                        key={a.id}
+                                        className={`${styles.row} ${idx < items.length - 1
+                                            ? styles.rowBorder
+                                            : ''}`}
+                                    >
+                                        {/* Icon */}
+                                        <div
+                                            className={
+                                                styles.icon}
+                                            style={{
+                                                background:
+                                                    config.bg
+                                            }}
+                                        >
+                                            {config.icon}
                                         </div>
-                                    )}
 
-                                    {/* Balance tag — you owe / you get back */}
-                                    {getBalanceTag(a)}
+                                        {/* Content */}
+                                        <div className={
+                                            styles.content}>
 
-                                    {/* Date */}
-                                    <div className={styles.date}>
-                                        {formatDate(a.createdAt)}
+                                            {/* Description */}
+                                            <div className={
+                                                styles.desc}>
+                                                {desc}
+                                            </div>
+
+                                            {/* Balance tag */}
+                                            {balTag && (
+                                                <div className={
+                                                    balTag.type === 'pos'
+                                                        ? styles.tagPos
+                                                        : styles.tagNeg
+                                                }>
+                                                    {balTag.text}
+                                                </div>
+                                            )}
+
+                                            {/* Date and Time */}
+                                            <div className={
+                                                styles.time}>
+                                                {dt.dateLabel !== 'Today' &&
+                                                dt.dateLabel !== 'Yesterday'
+                                                    ? `${dt.dateLabel}, ${dt.time}`
+                                                    : dt.time
+                                                }
+                                            </div>
+                                        </div>
                                     </div>
-                                </div>
-
-                            </div>
-                        )
-                    })
-                )}
-            </div>
+                                )
+                            })}
+                        </div>
+                    </div>
+                ))
+            )}
         </div>
     )
 }

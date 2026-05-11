@@ -80,29 +80,61 @@ export default function GroupDetail() {
     }, [id])
 
     const handleAddExpense = async (payload) => {
-        const e = await addExpense({ ...payload, groupId: id })
-        setExpenses(prev => [e, ...prev])
-        const [b, s] = await Promise.all([
-            groupApi.getBalances(id),
-            groupApi.checkSettled(id)
-        ])
-        setBalances(Array.isArray(b) ? b : [])
-        setSettledStatus(s)
+        try {
+            await addExpense({ ...payload, groupId: id })
+            // Re-fetch full group to get fresh expenses
+            // with correct splits format
+            const [freshGroup, b, s] = await Promise.all([
+                groupApi.getById(id),
+                groupApi.getBalances(id),
+                groupApi.checkSettled(id)
+            ])
+            setGroup(freshGroup)
+            setExpenses(
+                Array.isArray(freshGroup.expenses)
+                    ? freshGroup.expenses
+                    : []
+            )
+            setBalances(Array.isArray(b) ? b : [])
+            setSettledStatus(s)
+        } catch (err) {
+            toast.error(
+                err.response?.data?.message ||
+                'Failed to add expense'
+            )
+        }
     }
 
     const handleAddMember = async () => {
         if (!memberEmail.trim()) return
         setAddingMember(true)
         try {
-            const updated = await groupApi.addMember(id, memberEmail.trim())
-            // Re-fetch full group data to get updated members list
-            const freshGroup = await groupApi.getById(id)
-            setGroup(freshGroup)
+            // addMember now returns properly formatted group
+            const updated = await groupApi.addMember(
+                id, memberEmail.trim())
+
+            // Update group with new member data
+            if (updated && updated.members) {
+                setGroup(prev => ({
+                    ...prev,
+                    members: updated.members,
+                    createdBy: updated.createdBy || prev.createdBy
+                }))
+            } else {
+                // Fallback — re-fetch full group
+                const freshGroup = await groupApi.getById(id)
+                setGroup(freshGroup)
+            }
+
             setMemberEmail('')
             setShowAddMember(false)
-            toast.success('Member added!')
+            toast.success('Member added successfully!')
         } catch (err) {
-            toast.error(err.response?.data?.message || 'Failed to add member')
+            console.error('Add member error:', err)
+            toast.error(
+                err.response?.data?.message ||
+                'Failed to add member'
+            )
         } finally {
             setAddingMember(false)
         }
@@ -182,15 +214,21 @@ export default function GroupDetail() {
     }
 
     const getExpenseSplitLabel = (expense) => {
-        const myId = user?.id
-        const paidByMe = expense.paidBy?.id === myId
+        const myId = String(user?.id || '')
+        const paidById = String(
+            expense.paidBy?.id || '')
+        const paidByMe = paidById === myId
         const total = parseFloat(expense.amount || 0)
 
-        // Find my split — handle both formats
-        const mySplit = expense.splits?.find(s =>
-            s.userId === myId || s.user?.id === myId
-        )
-        const myShare = parseFloat(mySplit?.amount || 0)
+        // Find my split — check ALL possible formats
+        const mySplit = expense.splits?.find(s => {
+            const sid1 = String(s.userId || '')
+            const sid2 = String(s.user?.id || '')
+            return sid1 === myId || sid2 === myId
+        })
+
+        const myShare = parseFloat(
+            mySplit?.amount || 0)
 
         if (paidByMe) {
             // I paid — I lent everyone else's share
@@ -202,10 +240,13 @@ export default function GroupDetail() {
                     type: 'lent'
                 }
             }
-            // I paid but I'm the only one — not involved
-            return { label: '', amount: '', type: 'neutral' }
+            return {
+                label: 'paid in full',
+                amount: '',
+                type: 'neutral'
+            }
         } else {
-            // Someone else paid — I borrowed my share
+            // Someone else paid — I owe my share
             if (myShare > 0.01) {
                 return {
                     label: 'you borrowed',
@@ -213,7 +254,11 @@ export default function GroupDetail() {
                     type: 'borrowed'
                 }
             }
-            return { label: '', amount: '', type: 'neutral' }
+            return {
+                label: 'not involved',
+                amount: '',
+                type: 'neutral'
+            }
         }
     }
 

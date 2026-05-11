@@ -1,47 +1,318 @@
-.card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; }
-.cardHeader { padding: 18px 22px 14px; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; }
-.cardTitle { font-family: var(--font-display); font-size: 16px; font-weight: 600; }
-.headerActions { display: flex; gap: 8px; }
-.cardBody { padding: 0 22px; }
-
-.row {
-  display: flex;
-  align-items: center;
-  gap: 14px;
-  padding: 14px 0;
-  border-bottom: 1px solid var(--border);
+.page {
+    max-width: 680px;
+    margin: 0 auto;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
 }
-.row:last-child { border-bottom: none; }
-.row:hover .removeBtn { opacity: 1; }
 
-.info { flex: 1; }
-.name { font-size: 14px; font-weight: 500; }
-.email { font-size: 12px; color: var(--text2); margin-top: 2px; }
-
-.removeBtn {
-  opacity: 0;
-  background: none;
-  border: none;
-  cursor: pointer;
-  font-size: 13px;
-  width: 28px;
-  height: 28px;
-  border-radius: 6px;
-  color: var(--text2);
-  transition: opacity 0.15s, background 0.15s;
+/* ── Header ── */
+.header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
 }
-.removeBtn:hover { background: var(--accent2-light); color: var(--accent2); }
 
-.empty { text-align: center; padding: 40px 20px; color: var(--text2); }
-.emptyIcon { font-size: 38px; margin-bottom: 12px; }
-.empty p { font-size: 14px; }
+.title {
+    font-family: var(--font-display);
+    font-size: 24px;
+    font-weight: 700;
+    letter-spacing: -0.5px;
+    color: var(--text);
+}
 
-.formGroup { display: flex; flex-direction: column; gap: 5px; }
-.label { font-size: 12px; font-weight: 600; color: var(--text2); letter-spacing: 0.04em; text-transform: uppercase; }
-.input { padding: 10px 14px; border: 1px solid var(--border); border-radius: var(--radius-sm); font-family: var(--font); font-size: 14px; background: var(--bg); color: var(--text); outline: none; width: 100%; }
+/* ── Empty state ── */
+.empty {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 48px 24px;
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+}
+.emptyIcon { font-size: 48px; margin-bottom: 8px; }
+.emptyTitle {
+    font-size: 18px;
+    font-weight: 600;
+    color: var(--text);
+}
+.emptySub {
+    font-size: 14px;
+    color: var(--text2);
+    margin-bottom: 12px;
+    line-height: 1.6;
+}
+
+/* ── Friends list ── */
+.friendsList {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    overflow: hidden;
+}
+
+/* ── Friend row ── */
+.friendRow {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 14px 18px;
+    border-bottom: 1px solid var(--border);
+    cursor: pointer;
+    transition: background 0.15s;
+}
+.friendRow:last-child { border-bottom: none; }
+.friendRow:hover { background: var(--surface2); }
+.friendRowActive {
+    background: var(--accent-light);
+    border-left: 3px solid var(--accent);
+}
+
+.friendInfo { flex: 1; min-width: 0; }
+
+.friendName {
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--text);
+}
+
+.friendEmail {
+    font-size: 12px;
+    color: var(--text2);
+    margin-top: 2px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* Balance */
+.balanceWrap { text-align: right; flex-shrink: 0; }
+
+.settled {
+    font-size: 12px;
+    color: var(--text3);
+    font-style: italic;
+}
+
+.balancePos { text-align: right; }
+.balanceNeg { text-align: right; }
+
+.balLabel {
+    font-size: 11px;
+    color: var(--text2);
+}
+
+.balAmt {
+    font-size: 15px;
+    font-weight: 700;
+}
+.balancePos .balAmt { color: var(--accent); }
+.balanceNeg .balAmt { color: var(--accent2); }
+
+.chevron {
+    font-size: 10px;
+    color: var(--text3);
+    flex-shrink: 0;
+}
+
+/* ── Expanded detail ── */
+.detail {
+    background: var(--surface2);
+    border-bottom: 1px solid var(--border);
+    padding: 20px 22px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    animation: slideDown 0.2s ease;
+}
+
+@keyframes slideDown {
+    from {
+        opacity: 0;
+        transform: translateY(-8px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Detail header */
+.detailHeader {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+}
+
+.detailName {
+    font-family: var(--font-display);
+    font-size: 18px;
+    font-weight: 700;
+    color: var(--text);
+    margin-bottom: 4px;
+}
+
+.detailSettled {
+    font-size: 13px;
+    color: var(--accent);
+    font-weight: 500;
+}
+
+.detailOwed {
+    font-size: 13px;
+    color: var(--accent);
+}
+
+.detailOwe {
+    font-size: 13px;
+    color: var(--accent2);
+}
+
+/* Action buttons */
+.detailActions {
+    display: flex;
+    gap: 10px;
+}
+
+.actionBtn {
+    padding: 9px 18px;
+    background: var(--accent);
+    color: #fff;
+    border: none;
+    border-radius: var(--radius-sm);
+    font-family: var(--font);
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: opacity 0.15s;
+}
+.actionBtn:hover { opacity: 0.85; }
+
+.settleBtn {
+    padding: 9px 18px;
+    background: var(--surface);
+    color: var(--accent);
+    border: 2px solid var(--accent);
+    border-radius: var(--radius-sm);
+    font-family: var(--font);
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.15s;
+}
+.settleBtn:hover { background: var(--accent-light); }
+
+/* Shared groups */
+.sharedGroups {
+    border-top: 1px solid var(--border);
+    padding-top: 12px;
+}
+
+.sharedTitle {
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--text3);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    margin-bottom: 8px;
+}
+
+.sharedList {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+
+.groupTag {
+    padding: 4px 12px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 100px;
+    font-size: 12px;
+    color: var(--text);
+    font-weight: 500;
+}
+
+/* ── Modal form ── */
+.formGroup {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+}
+
+.label {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text2);
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+}
+
+.input {
+    padding: 10px 14px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    font-family: var(--font);
+    font-size: 14px;
+    background: var(--bg);
+    color: var(--text);
+    outline: none;
+    width: 100%;
+}
 .input:focus { border-color: var(--accent); }
-.hint { font-size: 12px; color: var(--text2); }
 
-.btnPrimary { padding: 8px 16px; background: var(--accent); color: #fff; border: none; border-radius: var(--radius-sm); font-family: var(--font); font-size: 13px; font-weight: 500; cursor: pointer; }
-.btnPrimary:disabled { opacity: 0.6; cursor: not-allowed; }
-.btnOutline { padding: 8px 16px; background: none; border: 1px solid var(--border); border-radius: var(--radius-sm); font-family: var(--font); font-size: 13px; cursor: pointer; color: var(--text); }
+.hint {
+    font-size: 12px;
+    color: var(--text2);
+}
+
+/* ── Buttons ── */
+.btnPrimary {
+    padding: 9px 18px;
+    background: var(--accent);
+    color: #fff;
+    border: none;
+    border-radius: var(--radius-sm);
+    font-family: var(--font);
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: opacity 0.15s;
+}
+.btnPrimary:hover { opacity: 0.85; }
+.btnPrimary:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+.btnOutline {
+    padding: 9px 18px;
+    background: none;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    font-family: var(--font);
+    font-size: 14px;
+    cursor: pointer;
+    color: var(--text);
+}
+
+/* ── Mobile ── */
+@media (max-width: 768px) {
+    .friendRow {
+        padding: 12px 14px;
+        gap: 10px;
+    }
+
+    .detailActions {
+        flex-direction: column;
+    }
+
+    .actionBtn,
+    .settleBtn {
+        width: 100%;
+        text-align: center;
+    }
+}

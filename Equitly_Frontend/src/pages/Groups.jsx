@@ -27,7 +27,6 @@ export default function Groups() {
     const [showCreate, setShowCreate] = useState(false)
     const [name, setName] = useState('')
     const [emoji, setEmoji] = useState('🏠')
-    const [selectedFriends, setSelectedFriends] = useState([])
     const [saving, setSaving] = useState(false)
     const [search, setSearch] = useState('')
 
@@ -44,14 +43,6 @@ export default function Groups() {
     return () => clearInterval(interval)
     }, [location.key])
 
-    const toggleFriend = (id) => {
-        setSelectedFriends(prev =>
-            prev.includes(id)
-                ? prev.filter(i => i !== id)
-                : [...prev, id]
-        )
-    }
-
     const handleCreate = async () => {
         if (!name.trim()) return
         setSaving(true)
@@ -59,12 +50,11 @@ export default function Groups() {
             await addGroup({
                 name: name.trim(),
                 emoji,
-                memberIds: selectedFriends
+                memberIds: []
             })
             setShowCreate(false)
             setName('')
             setEmoji('🏠')
-            setSelectedFriends([])
             await fetchGroups()
         } finally {
             setSaving(false)
@@ -75,7 +65,6 @@ export default function Groups() {
         setShowCreate(false)
         setName('')
         setEmoji('🏠')
-        setSelectedFriends([])
     }
 
     // Filter groups by search
@@ -253,41 +242,6 @@ export default function Groups() {
                         </div>
                     </div>
 
-                    {/* Add Friends */}
-                    <div className={styles.formGroup}>
-                        <label className={styles.label}>
-                            Add Friends
-                            <span className={styles.labelHint}>
-                                (optional)
-                            </span>
-                        </label>
-                        {Array.isArray(friends) && friends.length > 0 ? (
-                            <div className={styles.chips}>
-                                {friends.map(f => (
-                                    <button
-                                        key={f.id}
-                                        type="button"
-                                        className={`${styles.chip} ${
-                                            selectedFriends.includes(f.id)
-                                                ? styles.chipActive
-                                                : ''
-                                        }`}
-                                        onClick={() => toggleFriend(f.id)}
-                                    >
-                                        {selectedFriends.includes(f.id)
-                                            ? '✓ ' : ''}
-                                        {f.name}
-                                    </button>
-                                ))}
-                            </div>
-                        ) : (
-                            <p className={styles.noFriends}>
-                                No friends added yet. You can add members
-                                after creating the group.
-                            </p>
-                        )}
-                    </div>
-
                     {/* Preview */}
                     {name.trim() && (
                         <div className={styles.preview}>
@@ -299,9 +253,7 @@ export default function Groups() {
                                     {name}
                                 </div>
                                 <div className={styles.previewMeta}>
-                                    {selectedFriends.length + 1} member
-                                    {selectedFriends.length + 1 !== 1
-                                        ? 's' : ''} including you
+                                    1 member including you
                                 </div>
                             </div>
                         </div>
