@@ -194,29 +194,29 @@ export default function Activity() {
                                         </div>
 
                                         {/* Content */}
-                                        <div className={
-                                            styles.content}>
+                                        <div className={styles.content}>
 
                                             {/* Description */}
-                                            <div className={
-                                                styles.desc}>
+                                            <div className={`${styles.desc} ${a.type === 'EXPENSE_DELETED'
+                                                ? styles.descDeleted : ''}`}>
                                                 {desc}
                                             </div>
 
                                             {/* Balance tag */}
                                             {balTag && (
                                                 <div className={
-                                                    balTag.type === 'pos'
-                                                        ? styles.tagPos
-                                                        : styles.tagNeg
+                                                    a.type === 'EXPENSE_DELETED'
+                                                        ? styles.tagDeleted
+                                                        : balTag.type === 'pos'
+                                                            ? styles.tagPos
+                                                            : styles.tagNeg
                                                 }>
                                                     {balTag.text}
                                                 </div>
                                             )}
 
                                             {/* Date and Time */}
-                                            <div className={
-                                                styles.time}>
+                                            <div className={styles.time}>
                                                 {dt.dateLabel !== 'Today' &&
                                                 dt.dateLabel !== 'Yesterday'
                                                     ? `${dt.dateLabel}, ${dt.time}`

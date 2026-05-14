@@ -1,11 +1,11 @@
 import { useState } from 'react'
 import { useAuth } from '../../context/AuthContext'
+import { ReceiptMpdal } from './ReceiptModal'
 import {
     formatCurrency,
     CATEGORY_EMOJI,
     CATEGORY_COLORS
 } from '../../utils/formatCurrency'
-import ReceiptModal from './ReceiptModal'
 import styles from './ExpenseItem.module.css'
 
 export default function ExpenseItem({
@@ -15,9 +15,6 @@ export default function ExpenseItem({
     onUpdate
 }) {
     const { user } = useAuth()
-    const [showReceipt, setShowReceipt] =
-        useState(false)
-
     const myId = String(user?.id || '')
 
     // ── Check if current user can edit/delete ──
@@ -60,7 +57,6 @@ export default function ExpenseItem({
         expense.category] || '📌'
     const bg = CATEGORY_COLORS[
         expense.category] || '#f5f4f0'
-    const hasReceipt = !!expense.receiptFilename
 
     return (
         <>
@@ -112,20 +108,6 @@ export default function ExpenseItem({
 
                 {/* Actions */}
                 <div className={styles.actions}>
-                    {/* Receipt button */}
-                    <button
-                        className={`${styles.actionBtn} ${hasReceipt
-                            ? styles.receiptActive
-                            : ''}`}
-                        onClick={() =>
-                            setShowReceipt(true)}
-                        title={hasReceipt
-                            ? 'View receipt'
-                            : 'Add receipt'}
-                    >
-                        {hasReceipt ? '🧾' : '📷'}
-                    </button>
-
                     {/* Edit — only for creator/payer */}
                     {canModify && onEdit && (
                         <button
@@ -151,19 +133,6 @@ export default function ExpenseItem({
                     )}
                 </div>
             </div>
-
-            {/* Receipt Modal */}
-            {showReceipt && (
-                <ReceiptModal
-                    expense={expense}
-                    onClose={() =>
-                        setShowReceipt(false)}
-                    onUpdate={() => {
-                        if (onUpdate) onUpdate()
-                        setShowReceipt(false)
-                    }}
-                />
-            )}
         </>
     )
 }

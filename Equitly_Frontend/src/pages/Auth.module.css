@@ -111,10 +111,10 @@
     font-weight: 600;
     font-family: var(--font);
     color: var(--accent);
-    padding: 4px 6px;
+    padding: 4px 8px;
     border-radius: 4px;
-    transition: background 0.15s;
     letter-spacing: 0.02em;
+    transition: background 0.15s;
 }
 .eyeBtn:hover {
     background: var(--accent-light);

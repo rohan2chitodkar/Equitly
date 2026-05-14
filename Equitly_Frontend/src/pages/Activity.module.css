@@ -155,3 +155,18 @@
     .desc { font-size: 13px; }
     .amount { font-size: 13px; }
 }
+
+/* ── Deleted expense styles ── */
+.descDeleted {
+    text-decoration: line-through;
+    color: var(--text2);
+    opacity: 0.7;
+}
+
+.tagDeleted {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text3);
+    text-decoration: line-through;
+    opacity: 0.7;
+}

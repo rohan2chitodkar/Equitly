@@ -21,7 +21,7 @@
     color: var(--text);
 }
 
-/* ── Empty state ── */
+/* ── Empty ── */
 .empty {
     background: var(--surface);
     border: 1px solid var(--border);
@@ -43,7 +43,6 @@
     font-size: 14px;
     color: var(--text2);
     margin-bottom: 12px;
-    line-height: 1.6;
 }
 
 /* ── Friends list ── */
@@ -54,7 +53,6 @@
     overflow: hidden;
 }
 
-/* ── Friend row ── */
 .friendRow {
     display: flex;
     align-items: center;
@@ -66,167 +64,160 @@
 }
 .friendRow:last-child { border-bottom: none; }
 .friendRow:hover { background: var(--surface2); }
-.friendRowActive {
-    background: var(--accent-light);
-    border-left: 3px solid var(--accent);
-}
 
 .friendInfo { flex: 1; min-width: 0; }
-
 .friendName {
     font-size: 15px;
     font-weight: 600;
     color: var(--text);
 }
-
 .friendEmail {
     font-size: 12px;
     color: var(--text2);
     margin-top: 2px;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
 }
 
-/* Balance */
-.balanceWrap { text-align: right; flex-shrink: 0; }
-
+.balWrap { text-align: right; flex-shrink: 0; }
 .settled {
     font-size: 12px;
     color: var(--text3);
     font-style: italic;
 }
-
-.balancePos { text-align: right; }
-.balanceNeg { text-align: right; }
-
-.balLabel {
-    font-size: 11px;
-    color: var(--text2);
-}
-
-.balAmt {
-    font-size: 15px;
-    font-weight: 700;
-}
-.balancePos .balAmt { color: var(--accent); }
-.balanceNeg .balAmt { color: var(--accent2); }
-
-.chevron {
-    font-size: 10px;
+.balPos, .balNeg { text-align: right; }
+.balLabel { font-size: 11px; color: var(--text2); }
+.balAmt { font-size: 14px; font-weight: 700; }
+.balPos .balAmt { color: var(--accent); }
+.balNeg .balAmt { color: var(--accent2); }
+.arrow {
+    font-size: 22px;
     color: var(--text3);
     flex-shrink: 0;
 }
 
-/* ── Expanded detail ── */
-.detail {
-    background: var(--surface2);
-    border-bottom: 1px solid var(--border);
+/* ════════════════════════════════════════ */
+/* ── Detail View ── */
+/* ════════════════════════════════════════ */
+
+.backBtn {
+    background: none;
+    border: none;
+    font-family: var(--font);
+    font-size: 14px;
+    color: var(--text2);
+    cursor: pointer;
+    padding: 4px 0;
+    transition: color 0.15s;
+    align-self: flex-start;
+}
+.backBtn:hover { color: var(--text); }
+
+/* ── Person card ── */
+.personCard {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
     padding: 20px 22px;
     display: flex;
-    flex-direction: column;
+    align-items: center;
+    justify-content: space-between;
     gap: 16px;
-    animation: slideDown 0.2s ease;
+    flex-wrap: wrap;
 }
 
-@keyframes slideDown {
-    from {
-        opacity: 0;
-        transform: translateY(-8px);
-    }
-    to {
-        opacity: 1;
-        transform: translateY(0);
-    }
-}
-
-/* Detail header */
-.detailHeader {
+.personLeft {
     display: flex;
     align-items: center;
     gap: 14px;
 }
 
-.detailName {
+.personName {
     font-family: var(--font-display);
-    font-size: 18px;
+    font-size: 20px;
     font-weight: 700;
     color: var(--text);
-    margin-bottom: 4px;
+    margin-bottom: 3px;
 }
 
-.detailSettled {
+.personEmail {
     font-size: 13px;
-    color: var(--accent);
-    font-weight: 500;
+    color: var(--text2);
 }
 
-.detailOwed {
-    font-size: 13px;
-    color: var(--accent);
-}
-
-.detailOwe {
-    font-size: 13px;
-    color: var(--accent2);
-}
-
-/* Action buttons */
-.detailActions {
+.personActions {
     display: flex;
     gap: 10px;
+    flex-wrap: wrap;
 }
 
-.actionBtn {
+.btnAddExpense {
     padding: 9px 18px;
     background: var(--accent);
     color: #fff;
     border: none;
     border-radius: var(--radius-sm);
     font-family: var(--font);
-    font-size: 13px;
+    font-size: 14px;
     font-weight: 500;
     cursor: pointer;
     transition: opacity 0.15s;
+    white-space: nowrap;
 }
-.actionBtn:hover { opacity: 0.85; }
+.btnAddExpense:hover { opacity: 0.85; }
 
-.settleBtn {
+.btnSettleUp {
     padding: 9px 18px;
     background: var(--surface);
     color: var(--accent);
     border: 2px solid var(--accent);
     border-radius: var(--radius-sm);
     font-family: var(--font);
-    font-size: 13px;
+    font-size: 14px;
     font-weight: 500;
     cursor: pointer;
     transition: all 0.15s;
+    white-space: nowrap;
 }
-.settleBtn:hover { background: var(--accent-light); }
-
-/* Shared groups */
-.sharedGroups {
-    border-top: 1px solid var(--border);
-    padding-top: 12px;
+.btnSettleUp:hover {
+    background: var(--accent-light);
 }
 
-.sharedTitle {
-    font-size: 11px;
-    font-weight: 700;
-    color: var(--text3);
-    text-transform: uppercase;
-    letter-spacing: 0.06em;
-    margin-bottom: 8px;
+/* ── Balance status ── */
+.balStatus {
+    padding: 12px 18px;
+    border-radius: var(--radius);
+    font-size: 14px;
+    font-weight: 500;
+    text-align: center;
+}
+.balStatusOwed {
+    background: var(--accent-light);
+    color: var(--accent);
+    border: 1px solid var(--accent);
+}
+.balStatusOwe {
+    background: var(--accent2-light);
+    color: var(--accent2);
+    border: 1px solid var(--accent2);
 }
 
-.sharedList {
+/* ── Shared groups ── */
+.sharedGroupsWrap {
     display: flex;
+    align-items: center;
     flex-wrap: wrap;
-    gap: 6px;
+    gap: 8px;
+    padding: 6px 0;
 }
 
-.groupTag {
+.sharedGroupsLabel {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text2);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.groupChip {
     padding: 4px 12px;
     background: var(--surface);
     border: 1px solid var(--border);
@@ -234,6 +225,163 @@
     font-size: 12px;
     color: var(--text);
     font-weight: 500;
+    cursor: pointer;
+    transition: all 0.15s;
+}
+.groupChip:hover {
+    background: var(--accent-light);
+    border-color: var(--accent);
+    color: var(--accent);
+}
+
+/* ── History wrap ── */
+.historyWrap {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.historyLoading {
+    padding: 32px;
+    text-align: center;
+    color: var(--text2);
+    font-size: 14px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+}
+
+/* ── History empty ── */
+.historyEmpty {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 40px 24px;
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+}
+
+/* ── Month header ── */
+.monthHeader {
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--text3);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    padding: 4px 0;
+    margin-bottom: 4px;
+}
+
+/* ── History card ── */
+.historyCard {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    overflow: hidden;
+    margin-bottom: 6px;
+}
+
+/* ── History row ── */
+.historyRow {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--border);
+    transition: background 0.15s;
+}
+.historyRow:last-child { border-bottom: none; }
+.historyRow:hover { background: var(--surface2); }
+
+.histIcon {
+    width: 38px;
+    height: 38px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 18px;
+    flex-shrink: 0;
+}
+
+.histInfo { flex: 1; min-width: 0; }
+
+.histDesc {
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--text);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.histMeta {
+    font-size: 12px;
+    color: var(--text2);
+    margin-top: 2px;
+}
+
+.groupName {
+    color: var(--accent);
+    font-weight: 500;
+}
+
+.histRight {
+    text-align: right;
+    flex-shrink: 0;
+    min-width: 80px;
+}
+
+.histTotal {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text);
+}
+
+.histLent {
+    font-size: 12px;
+    color: var(--accent);
+    font-weight: 500;
+    margin-top: 2px;
+}
+
+.histBorrowed {
+    font-size: 12px;
+    color: var(--accent2);
+    font-weight: 500;
+    margin-top: 2px;
+}
+
+/* ── Action buttons ── */
+.histActions {
+    display: flex;
+    gap: 4px;
+    flex-shrink: 0;
+    opacity: 0;
+    transition: opacity 0.15s;
+}
+.historyRow:hover .histActions { opacity: 1; }
+
+.histBtn {
+    width: 30px;
+    height: 30px;
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--border);
+    background: var(--surface2);
+    cursor: pointer;
+    font-size: 13px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.15s;
+}
+.histBtn:hover { background: var(--border); }
+.histDeleteBtn:hover {
+    background: var(--accent2-light) !important;
+    border-color: var(--accent2) !important;
 }
 
 /* ── Modal form ── */
@@ -242,7 +390,6 @@
     flex-direction: column;
     gap: 5px;
 }
-
 .label {
     font-size: 12px;
     font-weight: 600;
@@ -250,7 +397,6 @@
     letter-spacing: 0.04em;
     text-transform: uppercase;
 }
-
 .input {
     padding: 10px 14px;
     border: 1px solid var(--border);
@@ -263,11 +409,7 @@
     width: 100%;
 }
 .input:focus { border-color: var(--accent); }
-
-.hint {
-    font-size: 12px;
-    color: var(--text2);
-}
+.hint { font-size: 12px; color: var(--text2); }
 
 /* ── Buttons ── */
 .btnPrimary {
@@ -301,18 +443,58 @@
 
 /* ── Mobile ── */
 @media (max-width: 768px) {
-    .friendRow {
-        padding: 12px 14px;
-        gap: 10px;
-    }
-
-    .detailActions {
+    .personCard {
         flex-direction: column;
+        align-items: flex-start;
     }
-
-    .actionBtn,
-    .settleBtn {
-        width: 100%;
+    .personActions { width: 100%; }
+    .btnAddExpense, .btnSettleUp {
+        flex: 1;
         text-align: center;
     }
+    .histActions { opacity: 1; }
+    .histBtn {
+        width: 28px;
+        height: 28px;
+        font-size: 12px;
+    }
+}
+
+/* ── History title ── */
+.historyTitle {
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--text3);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    padding: 12px 16px 8px;
+    border-bottom: 1px solid var(--border);
+}
+
+/* ── Group history icon ── */
+.groupHistIcon {
+    width: 38px;
+    height: 38px;
+    border-radius: 8px;
+    background: var(--accent-light);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 18px;
+    flex-shrink: 0;
+    border: 1px solid var(--accent);
+}
+
+/* ── Settled text ── */
+.histSettled {
+    font-size: 12px;
+    color: var(--text3);
+    font-style: italic;
+}
+
+/* ── Arrow ── */
+.histArrow {
+    font-size: 20px;
+    color: var(--text3);
+    flex-shrink: 0;
 }

@@ -7,7 +7,11 @@ import AddExpenseModal from '../components/expenses/AddExpenseModal'
 import SettleUpModal from '../components/friends/SettleUpModal'
 import Modal from '../components/common/Modal'
 import Avatar from '../components/common/Avatar'
-import { formatCurrency, CATEGORY_EMOJI, CATEGORY_COLORS } from '../utils/formatCurrency'
+import {
+    formatCurrency,
+    CATEGORY_EMOJI,
+    CATEGORY_COLORS
+} from '../utils/formatCurrency'
 import toast from 'react-hot-toast'
 import styles from './GroupDetail.module.css'
 
@@ -15,62 +19,84 @@ export default function GroupDetail() {
     const { id } = useParams()
     const navigate = useNavigate()
     const { user } = useAuth()
-    const { friends, addExpense, settleUp, fetchGroups } = useApp()
+    const {
+        friends,
+        addExpense,
+        settleUp,
+        fetchGroups,
+        deleteExpense,
+        updateExpense
+    } = useApp()
 
     const [group, setGroup] = useState(null)
     const [expenses, setExpenses] = useState([])
     const [balances, setBalances] = useState([])
-    const [settledStatus, setSettledStatus] = useState({
-        fullySettled: false,
-        memberSettled: false
-    })
+    const [settledStatus, setSettledStatus] =
+        useState({
+            fullySettled: false,
+            memberSettled: false
+        })
     const [loading, setLoading] = useState(true)
-    const [groupSettlements, setGroupSettlements] = useState([])
     const [showAdd, setShowAdd] = useState(false)
-    const [showSettle, setShowSettle] = useState(false)
-    const [showAddMember, setShowAddMember] = useState(false)
-    const [memberEmail, setMemberEmail] = useState('')
-    const [addingMember, setAddingMember] = useState(false)
+    const [showSettle, setShowSettle] =
+        useState(false)
+    const [showAddMember, setShowAddMember] =
+        useState(false)
+    const [memberEmail, setMemberEmail] =
+        useState('')
+    const [addingMember, setAddingMember] =
+        useState(false)
     const [deleting, setDeleting] = useState(false)
     const [leaving, setLeaving] = useState(false)
-    const [linkCopied, setLinkCopied] = useState(false)
-    const [activeTab, setActiveTab] = useState('expenses')
+    const [linkCopied, setLinkCopied] =
+        useState(false)
+    const [activeTab, setActiveTab] =
+        useState('expenses')
 
-    // Group expenses by month
+    // ── Edit expense state ──
+    const [editingExpense, setEditingExpense] =
+        useState(null)
+
+    // ── Group expenses by month ──
     const groupByMonth = (expenses) => {
         const grouped = {}
         expenses.forEach(e => {
             const date = new Date(e.createdAt)
-            const key = date.toLocaleDateString('en-IN', {
-                month: 'long',
-                year: 'numeric'
-            }).toUpperCase()
+            const key = date.toLocaleDateString(
+                'en-IN', {
+                    month: 'long',
+                    year: 'numeric'
+                }).toUpperCase()
             if (!grouped[key]) grouped[key] = []
             grouped[key].push(e)
         })
         return grouped
     }
 
+    // ── Load group data ──
     useEffect(() => {
         const load = async () => {
             setLoading(true)
             try {
-                const [g, b, s] = await Promise.all([
-                    groupApi.getById(id),
-                    groupApi.getBalances(id),
-                    groupApi.checkSettled(id)
-                ])
+                const [g, b, s] =
+                    await Promise.all([
+                        groupApi.getById(id),
+                        groupApi.getBalances(id),
+                        groupApi.checkSettled(id)
+                    ])
                 setGroup(g)
-                setExpenses(Array.isArray(g.expenses)
-                    ? g.expenses : [])
-                setBalances(Array.isArray(b) ? b : [])
-                // Make sure settledStatus is set correctly
+                setExpenses(
+                    Array.isArray(g.expenses)
+                        ? g.expenses : [])
+                setBalances(
+                    Array.isArray(b) ? b : [])
                 setSettledStatus({
-                    fullySettled: s?.fullySettled === true,
-                    memberSettled: s?.memberSettled === true
+                    fullySettled:
+                        s?.fullySettled === true,
+                    memberSettled:
+                        s?.memberSettled === true
                 })
-            } catch (err) {
-                console.error('Failed to load group:', err)
+            } catch {
                 toast.error('Failed to load group')
             } finally {
                 setLoading(false)
@@ -79,24 +105,38 @@ export default function GroupDetail() {
         load()
     }, [id])
 
-    const handleAddExpense = async (payload) => {
+    // ── Refresh group ──
+    const refreshGroup = async () => {
         try {
-            await addExpense({ ...payload, groupId: id })
-            // Re-fetch full group to get fresh expenses
-            // with correct splits format
-            const [freshGroup, b, s] = await Promise.all([
-                groupApi.getById(id),
-                groupApi.getBalances(id),
-                groupApi.checkSettled(id)
-            ])
+            const [freshGroup, b, s] =
+                await Promise.all([
+                    groupApi.getById(id),
+                    groupApi.getBalances(id),
+                    groupApi.checkSettled(id)
+                ])
             setGroup(freshGroup)
             setExpenses(
                 Array.isArray(freshGroup.expenses)
-                    ? freshGroup.expenses
-                    : []
-            )
+                    ? freshGroup.expenses : [])
             setBalances(Array.isArray(b) ? b : [])
-            setSettledStatus(s)
+            setSettledStatus({
+                fullySettled:
+                    s?.fullySettled === true,
+                memberSettled:
+                    s?.memberSettled === true
+            })
+        } catch {
+            toast.error('Failed to refresh group')
+        }
+    }
+
+    // ── Add expense ──
+    const handleAddExpense = async (payload) => {
+        try {
+            await addExpense({
+                ...payload, groupId: id
+            })
+            await refreshGroup()
         } catch (err) {
             toast.error(
                 err.response?.data?.message ||
@@ -105,32 +145,61 @@ export default function GroupDetail() {
         }
     }
 
+    // ── Edit expense ──
+    const handleEditExpense = async (payload) => {
+        try {
+            await updateExpense(
+                editingExpense.id, payload)
+            toast.success('Expense updated!')
+            setEditingExpense(null)
+            setShowAdd(false)
+            await refreshGroup()
+        } catch (err) {
+            toast.error(
+                err.response?.data?.message ||
+                'Failed to update expense'
+            )
+        }
+    }
+
+    // ── Delete expense ──
+    const handleDeleteExpense = async (
+            expenseId) => {
+        if (!window.confirm(
+                'Delete this expense?')) return
+        try {
+            await deleteExpense(expenseId)
+            toast.success('Expense deleted!')
+            await refreshGroup()
+        } catch (err) {
+            toast.error(
+                err.response?.data?.message ||
+                'Failed to delete expense'
+            )
+        }
+    }
+
+    // ── Add member ──
     const handleAddMember = async () => {
         if (!memberEmail.trim()) return
         setAddingMember(true)
         try {
-            // addMember now returns properly formatted group
-            const updated = await groupApi.addMember(
-                id, memberEmail.trim())
-
-            // Update group with new member data
+            const updated = await groupApi
+                .addMember(id, memberEmail.trim())
             if (updated && updated.members) {
                 setGroup(prev => ({
                     ...prev,
                     members: updated.members,
-                    createdBy: updated.createdBy || prev.createdBy
+                    createdBy: updated.createdBy
+                        || prev.createdBy
                 }))
             } else {
-                // Fallback — re-fetch full group
-                const freshGroup = await groupApi.getById(id)
-                setGroup(freshGroup)
+                await refreshGroup()
             }
-
             setMemberEmail('')
             setShowAddMember(false)
-            toast.success('Member added successfully!')
+            toast.success('Member added!')
         } catch (err) {
-            console.error('Add member error:', err)
             toast.error(
                 err.response?.data?.message ||
                 'Failed to add member'
@@ -140,32 +209,42 @@ export default function GroupDetail() {
         }
     }
 
+    // ── Share link ──
     const handleShareLink = () => {
-        const link = `${window.location.origin}/groups/${id}`
-        navigator.clipboard.writeText(link).then(() => {
-            setLinkCopied(true)
-            toast.success('Group link copied!')
-            setTimeout(() => setLinkCopied(false), 3000)
-        }).catch(() => {
-            const el = document.createElement('textarea')
-            el.value = link
-            document.body.appendChild(el)
-            el.select()
-            document.execCommand('copy')
-            document.body.removeChild(el)
-            setLinkCopied(true)
-            toast.success('Link copied!')
-            setTimeout(() => setLinkCopied(false), 3000)
-        })
+        const link =
+            `${window.location.origin}/groups/${id}`
+        navigator.clipboard.writeText(link)
+            .then(() => {
+                setLinkCopied(true)
+                toast.success('Group link copied!')
+                setTimeout(() =>
+                    setLinkCopied(false), 3000)
+            })
+            .catch(() => {
+                const el =
+                    document.createElement('textarea')
+                el.value = link
+                document.body.appendChild(el)
+                el.select()
+                document.execCommand('copy')
+                document.body.removeChild(el)
+                setLinkCopied(true)
+                toast.success('Link copied!')
+                setTimeout(() =>
+                    setLinkCopied(false), 3000)
+            })
     }
 
+    // ── Delete group ──
     const handleDelete = async () => {
         if (!settledStatus.fullySettled) {
-            toast.error('All members must settle before deleting')
+            toast.error(
+                'All members must settle first')
             return
         }
-        if (!window.confirm(`Delete "${group.name}"? This cannot be undone.`))
-            return
+        if (!window.confirm(
+                `Delete "${group.name}"? ` +
+                `This cannot be undone.`)) return
         setDeleting(true)
         try {
             await groupApi.delete(id)
@@ -173,18 +252,24 @@ export default function GroupDetail() {
             toast.success('Group deleted!')
             navigate('/groups')
         } catch (err) {
-            toast.error(err.response?.data?.message || 'Failed to delete')
+            toast.error(
+                err.response?.data?.message ||
+                'Failed to delete'
+            )
         } finally {
             setDeleting(false)
         }
     }
 
+    // ── Leave group ──
     const handleLeave = async () => {
         if (!settledStatus.memberSettled) {
-            toast.error('Settle your balance before leaving')
+            toast.error(
+                'Settle your balance before leaving')
             return
         }
-        if (!window.confirm(`Leave "${group.name}"?`)) return
+        if (!window.confirm(
+                `Leave "${group.name}"?`)) return
         setLeaving(true)
         try {
             await groupApi.leave(id)
@@ -192,46 +277,33 @@ export default function GroupDetail() {
             toast.success('You left the group')
             navigate('/groups')
         } catch (err) {
-            toast.error(err.response?.data?.message || 'Failed to leave')
+            toast.error(
+                err.response?.data?.message ||
+                'Failed to leave'
+            )
         } finally {
             setLeaving(false)
         }
     }
 
-    const getMyBalance = (balance) => {
-        const myId = user?.id
-        if (!balance || balance.length === 0) return null
-        return balance.find(b => b.friendId !== myId)
-    }
-
-    const formatDate = (dateStr) => {
-        const date = new Date(dateStr)
-        return {
-            day: date.getDate(),
-            month: date.toLocaleDateString('en-IN', { month: 'short' })
-                       .toUpperCase()
-        }
-    }
-
+    // ── Get split label for expense ──
     const getExpenseSplitLabel = (expense) => {
         const myId = String(user?.id || '')
         const paidById = String(
             expense.paidBy?.id || '')
         const paidByMe = paidById === myId
-        const total = parseFloat(expense.amount || 0)
+        const total = parseFloat(
+            expense.amount || 0)
 
-        // Find my split — check ALL possible formats
         const mySplit = expense.splits?.find(s => {
             const sid1 = String(s.userId || '')
             const sid2 = String(s.user?.id || '')
             return sid1 === myId || sid2 === myId
         })
-
         const myShare = parseFloat(
             mySplit?.amount || 0)
 
         if (paidByMe) {
-            // I paid — I lent everyone else's share
             const lent = total - myShare
             if (lent > 0.01) {
                 return {
@@ -246,7 +318,6 @@ export default function GroupDetail() {
                 type: 'neutral'
             }
         } else {
-            // Someone else paid — I owe my share
             if (myShare > 0.01) {
                 return {
                     label: 'you borrowed',
@@ -262,48 +333,33 @@ export default function GroupDetail() {
         }
     }
 
-    // Show settlement as a row in expenses
-    const renderSettlementRow = (settlement, index) => {
-        const { day, month: mon } = formatDate(
-            settlement.createdAt || new Date())
-        const payerName = settlement.payer?.id === user?.id
-            ? 'you' : settlement.payer?.name
-        const payeeName = settlement.payee?.id === user?.id
-            ? 'you' : settlement.payee?.name
-
-        return (
-            <div key={`s-${index}`} className={styles.settlementRow}>
-                <div className={styles.expenseDate}>
-                    <span className={styles.expMon}>{mon}</span>
-                    <span className={styles.expDay}>{day}</span>
-                </div>
-                <div className={styles.settlementIcon}>💸</div>
-                <div className={styles.expInfo}>
-                    <div className={styles.expName}>
-                        Payment
-                    </div>
-                    <div className={styles.expPaidBy}>
-                        {payerName} paid {payeeName}
-                    </div>
-                </div>
-                <div className={styles.expAmounts}>
-                    <div className={styles.settlementAmount}>
-                        {formatCurrency(settlement.amount)}
-                    </div>
-                </div>
-            </div>
-        )
+    const formatDate = (dateStr) => {
+        const date = new Date(dateStr)
+        return {
+            day: date.getDate(),
+            month: date.toLocaleDateString(
+                'en-IN', { month: 'short' }
+            ).toUpperCase()
+        }
     }
 
-    const isCreator = group?.createdBy?.id === user?.id
-    const isOnlyMember = group?.members?.length <= 1 && expenses.length === 0
-    const groupedExpenses = groupByMonth(expenses)
+    const isCreator =
+        group?.createdBy?.id === user?.id
+    const isOnlyMember =
+        group?.members?.length <= 1 &&
+        expenses.length === 0
+    const groupedExpenses =
+        groupByMonth(expenses)
 
     if (loading) return (
-        <div className={styles.loading}>Loading group…</div>
+        <div className={styles.loading}>
+            Loading group…
+        </div>
     )
     if (!group) return (
-        <div className={styles.loading}>Group not found.</div>
+        <div className={styles.loading}>
+            Group not found.
+        </div>
     )
 
     return (
@@ -311,27 +367,37 @@ export default function GroupDetail() {
 
             {/* ── Top Header ── */}
             <div className={styles.topHeader}>
-                <Link to="/groups" className={styles.back}>
+                <Link
+                    to="/groups"
+                    className={styles.back}
+                >
                     ← Groups
                 </Link>
                 <div className={styles.groupTitleRow}>
-                    <span className={styles.groupEmoji}>
+                    <span className={
+                        styles.groupEmoji}>
                         {group.emoji}
                     </span>
-                    <h1 className={styles.groupName}>{group.name}</h1>
+                    <h1 className={styles.groupName}>
+                        {group.name}
+                    </h1>
                 </div>
 
                 {/* Action buttons */}
                 <div className={styles.topActions}>
                     <button
                         className={styles.btnPrimary}
-                        onClick={() => setShowAdd(true)}
+                        onClick={() => {
+                            setEditingExpense(null)
+                            setShowAdd(true)
+                        }}
                     >
                         + Add an expense
                     </button>
                     <button
                         className={styles.btnSettle}
-                        onClick={() => setShowSettle(true)}
+                        onClick={() =>
+                            setShowSettle(true)}
                     >
                         Settle up
                     </button>
@@ -340,208 +406,311 @@ export default function GroupDetail() {
 
             {/* ── Tab bar ── */}
             <div className={styles.tabBar}>
-                <button
-                    className={`${styles.tab} ${activeTab === 'expenses' ? styles.tabActive : ''}`}
-                    onClick={() => setActiveTab('expenses')}
-                >
-                    Expenses
-                </button>
-                <button
-                    className={`${styles.tab} ${activeTab === 'balances' ? styles.tabActive : ''}`}
-                    onClick={() => setActiveTab('balances')}
-                >
-                    Balances
-                </button>
-                <button
-                    className={`${styles.tab} ${activeTab === 'members' ? styles.tabActive : ''}`}
-                    onClick={() => setActiveTab('members')}
-                >
-                    Members
-                </button>
-                <button
-                    className={`${styles.tab} ${activeTab === 'settings' ? styles.tabActive : ''}`}
-                    onClick={() => setActiveTab('settings')}
-                >
-                    Settings
-                </button>
+                {['expenses', 'balances',
+                  'members', 'settings'].map(tab => (
+                    <button
+                        key={tab}
+                        className={`${styles.tab} ${activeTab === tab
+                            ? styles.tabActive : ''}`}
+                        onClick={() =>
+                            setActiveTab(tab)}
+                    >
+                        {tab.charAt(0).toUpperCase()
+                            + tab.slice(1)}
+                    </button>
+                ))}
             </div>
 
             {/* ── Main layout ── */}
             <div className={styles.layout}>
 
-                {/* ── Left: expenses / balances / members / settings ── */}
+                {/* ── Left column ── */}
                 <div className={styles.leftCol}>
 
-                    {/* Expenses Tab */}
+                    {/* ══ Expenses Tab ══ */}
                     {activeTab === 'expenses' && (
                         <div>
                             {isOnlyMember ? (
-                                <div className={styles.emptyGroupCard}>
-                                    <div className={styles.emptyGroupEmoji}>
+                                <div className={
+                                    styles.emptyGroupCard}>
+                                    <div className={
+                                        styles.emptyGroupEmoji}>
                                         {group.emoji}
                                     </div>
-                                    <h2 className={styles.emptyGroupTitle}>
-                                        You're the only one here!
+                                    <h2 className={
+                                        styles.emptyGroupTitle}>
+                                        You're the only
+                                        one here!
                                     </h2>
-                                    <p className={styles.emptyGroupSub}>
+                                    <p className={
+                                        styles.emptyGroupSub}>
                                         Invite friends to{' '}
-                                        <strong>{group.name}</strong> to
-                                        start splitting expenses together.
+                                        <strong>
+                                            {group.name}
+                                        </strong>{' '}
+                                        to start splitting.
                                     </p>
-                                    <div className={styles.emptyActions}>
+                                    <div className={
+                                        styles.emptyActions}>
                                         <button
-                                            className={styles.emptyActionBtn}
+                                            className={
+                                                styles
+                                                .emptyActionBtn}
                                             onClick={() =>
-                                                setShowAddMember(true)}
+                                                setShowAddMember(
+                                                    true)}
                                         >
                                             <span>👥</span>
                                             <div>
                                                 <div className={
-                                                    styles.emptyActionTitle}>
-                                                    Add Group Members
-                                                </div>
-                                                <div className={
-                                                    styles.emptyActionDesc}>
-                                                    Invite friends on Equitly
+                                                    styles
+                                                    .emptyActionTitle}>
+                                                    Add Members
                                                 </div>
                                             </div>
                                             <span>→</span>
                                         </button>
                                         <button
-                                            className={styles.emptyActionBtn}
-                                            onClick={handleShareLink}
+                                            className={
+                                                styles
+                                                .emptyActionBtn}
+                                            onClick={
+                                                handleShareLink}
                                         >
                                             <span>
-                                                {linkCopied ? '✅' : '🔗'}
+                                                {linkCopied
+                                                    ? '✅'
+                                                    : '🔗'}
                                             </span>
                                             <div>
                                                 <div className={
-                                                    styles.emptyActionTitle}>
+                                                    styles
+                                                    .emptyActionTitle}>
                                                     {linkCopied
-                                                        ? 'Link Copied!'
-                                                        : 'Share Group Link'}
-                                                </div>
-                                                <div className={
-                                                    styles.emptyActionDesc}>
-                                                    Copy link to share
+                                                        ? 'Copied!'
+                                                        : 'Share Link'}
                                                 </div>
                                             </div>
                                             <span>→</span>
                                         </button>
                                     </div>
-                                    <div className={styles.orDivider}>
+                                    <div className={
+                                        styles.orDivider}>
                                         <span>or</span>
                                     </div>
                                     <button
-                                        className={styles.addAnywayBtn}
-                                        onClick={() => setShowAdd(true)}
+                                        className={
+                                            styles.addAnywayBtn}
+                                        onClick={() => {
+                                            setEditingExpense(
+                                                null)
+                                            setShowAdd(true)
+                                        }}
                                     >
-                                        + Add your first expense anyway
+                                        + Add first expense
                                     </button>
                                 </div>
                             ) : expenses.length === 0 ? (
-                                <div className={styles.noExpenses}>
-                                    <div className={styles.noExpensesIcon}>
+                                <div className={
+                                    styles.noExpenses}>
+                                    <div className={
+                                        styles.noExpensesIcon}>
                                         🧾
                                     </div>
                                     <p>No expenses yet.</p>
                                     <button
-                                        className={styles.btnPrimary}
-                                        onClick={() => setShowAdd(true)}
+                                        className={
+                                            styles.btnPrimary}
+                                        onClick={() => {
+                                            setEditingExpense(
+                                                null)
+                                            setShowAdd(true)
+                                        }}
                                     >
                                         + Add first expense
                                     </button>
                                 </div>
                             ) : (
-                                Object.entries(groupedExpenses).map(
-                                    ([month, monthExpenses]) => (
+                                Object.entries(
+                                    groupedExpenses
+                                ).map(([month,
+                                    monthExpenses]) => (
                                     <div key={month}>
+
                                         {/* Month header */}
-                                        <div className={styles.monthHeader}>
-                                            <span>{month}</span>
+                                        <div className={
+                                            styles.monthHeader}>
+                                            <span>
+                                                {month}
+                                            </span>
                                         </div>
 
                                         {/* Expense rows */}
-                                        {monthExpenses.map(expense => {
-                                            const { day, month: mon } =
-                                                formatDate(expense.createdAt)
+                                        {monthExpenses
+                                            .map(expense => {
+                                            const {
+                                                day,
+                                                month: mon
+                                            } = formatDate(
+                                                expense
+                                                .createdAt)
                                             const split =
-                                                getExpenseSplitLabel(expense)
+                                                getExpenseSplitLabel(
+                                                    expense)
                                             const emoji =
                                                 CATEGORY_EMOJI[
-                                                    expense.category
+                                                expense
+                                                .category
                                                 ] || '📌'
                                             const bg =
                                                 CATEGORY_COLORS[
-                                                    expense.category
+                                                expense
+                                                .category
                                                 ] || '#f5f4f0'
+
+                                            // Can this user
+                                            // edit/delete?
+                                            const canModify =
+                                                String(
+                                                expense.paidBy
+                                                ?.id || '')
+                                                === String(
+                                                user?.id || '')
+                                                ||
+                                                String(
+                                                expense
+                                                .createdBy
+                                                ?.id || '')
+                                                === String(
+                                                user?.id || '')
 
                                             return (
                                                 <div
-                                                    key={expense.id}
+                                                    key={
+                                                        expense.id}
                                                     className={
-                                                        styles.expenseRow}
+                                                        styles
+                                                        .expenseRow}
                                                 >
-                                                    {/* Date */}
-                                                    <div className={
-                                                        styles.expenseDate}>
-                                                        <span className={
-                                                            styles.expMon}>
-                                                            {mon}
-                                                        </span>
-                                                        <span className={
-                                                            styles.expDay}>
-                                                            {day}
-                                                        </span>
-                                                    </div>
+                                                {/* Date */}
+                                                <div className={
+                                                    styles
+                                                    .expenseDate}>
+                                                    <span className={
+                                                        styles
+                                                        .expMon}>
+                                                        {mon}
+                                                    </span>
+                                                    <span className={
+                                                        styles
+                                                        .expDay}>
+                                                        {day}
+                                                    </span>
+                                                </div>
 
-                                                    {/* Category icon */}
-                                                    <div
-                                                        className={
-                                                            styles.expIcon}
-                                                        style={{
-                                                            background: bg
-                                                        }}
-                                                    >
-                                                        {emoji}
-                                                    </div>
+                                                {/* Icon */}
+                                                <div
+                                                    className={
+                                                        styles
+                                                        .expIcon}
+                                                    style={{
+                                                        background:
+                                                            bg
+                                                    }}
+                                                >
+                                                    {emoji}
+                                                </div>
 
-                                                    {/* Description */}
+                                                {/* Info */}
+                                                <div className={
+                                                    styles
+                                                    .expInfo}>
                                                     <div className={
-                                                        styles.expInfo}>
+                                                        styles
+                                                        .expName}>
+                                                        {expense
+                                                        .description}
+                                                    </div>
+                                                    <div className={
+                                                        styles
+                                                        .expPaidBy}>
+                                                        {expense
+                                                        .paidBy
+                                                        ?.id ===
+                                                        user?.id
+                                                            ? `you paid ${formatCurrency(expense.amount)}`
+                                                            : `${expense.paidBy?.name} paid ${formatCurrency(expense.amount)}`
+                                                        }
+                                                    </div>
+                                                </div>
+
+                                                {/* Split */}
+                                                <div className={
+                                                    styles
+                                                    .expAmounts}>
+                                                    {split.type
+                                                    !== 'neutral'
+                                                    ? (
                                                         <div className={
-                                                            styles.expName}>
-                                                            {expense.description}
-                                                        </div>
-                                                        <div className={styles.expPaidBy}>
-                                                            {expense.paidBy?.id === user?.id
-                                                                ? `you paid ${formatCurrency(expense.amount)}`
-                                                                : `${expense.paidBy?.name} paid ${formatCurrency(expense.amount)}`
-                                                            }
-                                                        </div>
-                                                    </div>
-
-                                                    {/* Amount */}
-                                                    <div className={styles.expAmounts}>
-                                                        {split.type !== 'neutral' ? (
+                                                            split.type
+                                                            === 'lent'
+                                                                ? styles.expLent
+                                                                : styles.expBorrowed
+                                                        }>
                                                             <div className={
-                                                                split.type === 'lent'
-                                                                    ? styles.expLent
-                                                                    : styles.expBorrowed
-                                                            }>
-                                                                <div className={styles.expSplitLabel}>
-                                                                    {split.label}
-                                                                </div>
-                                                                <div className={styles.expSplitAmt}>
-                                                                    {split.amount}
-                                                                </div>
+                                                                styles
+                                                                .expSplitLabel}>
+                                                                {split.label}
                                                             </div>
-                                                        ) : (
-                                                            <div className={styles.expNeutral}>
-                                                                not involved
+                                                            <div className={
+                                                                styles
+                                                                .expSplitAmt}>
+                                                                {split.amount}
                                                             </div>
-                                                        )}
+                                                        </div>
+                                                    ) : (
+                                                        <div className={
+                                                            styles
+                                                            .expNeutral}>
+                                                            not involved
+                                                        </div>
+                                                    )}
+                                                </div>
+
+                                                {/* Actions */}
+                                                {canModify && (
+                                                    <div className={
+                                                        styles
+                                                        .expActions}>
+                                                        <button
+                                                            className={
+                                                                styles
+                                                                .expActionBtn}
+                                                            onClick={
+                                                                () => {
+                                                                setEditingExpense(
+                                                                    expense)
+                                                                setShowAdd(
+                                                                    true)
+                                                            }}
+                                                            title="Edit"
+                                                        >
+                                                            ✏️
+                                                        </button>
+                                                        <button
+                                                            className={`${styles.expActionBtn} ${styles.expDeleteBtn}`}
+                                                            onClick={
+                                                                () =>
+                                                                handleDeleteExpense(
+                                                                    expense
+                                                                    .id)
+                                                            }
+                                                            title="Delete"
+                                                        >
+                                                            🗑️
+                                                        </button>
                                                     </div>
+                                                )}
                                                 </div>
                                             )
                                         })}
@@ -551,43 +720,61 @@ export default function GroupDetail() {
                         </div>
                     )}
 
-                    {/* Balances Tab */}
+                    {/* ══ Balances Tab ══ */}
                     {activeTab === 'balances' && (
                         <div className={styles.card}>
-                            <div className={styles.cardHeader}>
-                                <h3 className={styles.cardTitle}>
+                            <div className={
+                                styles.cardHeader}>
+                                <h3 className={
+                                    styles.cardTitle}>
                                     Group Balances
                                 </h3>
                             </div>
-                            <div className={styles.cardBody}>
-                                {balances.length === 0 ? (
-                                    <div className={styles.allSettled}>
+                            <div className={
+                                styles.cardBody}>
+                                {balances.length
+                                    === 0 ? (
+                                    <div className={
+                                        styles
+                                        .allSettled}>
                                         ✅ All settled up!
                                     </div>
                                 ) : (
-                                    balances.map((b, i) => (
+                                    balances.map(
+                                        (b, i) => (
                                         <div
                                             key={i}
-                                            className={styles.balanceRow}
+                                            className={
+                                                styles
+                                                .balanceRow}
                                         >
                                             <Avatar
-                                                name={b.friendName}
+                                                name={
+                                                    b.friendName}
                                                 size={36}
                                             />
                                             <div className={
-                                                styles.balanceInfo}>
+                                                styles
+                                                .balanceInfo}>
                                                 <div className={
-                                                    styles.balanceName}>
+                                                    styles
+                                                    .balanceName}>
                                                     {b.friendName}
                                                 </div>
                                                 <div className={
-                                                    b.netAmount >= 0
-                                                        ? styles.balancePos
-                                                        : styles.balanceNeg
+                                                    parseFloat(
+                                                    b.netAmount)
+                                                    >= 0
+                                                        ? styles
+                                                            .balancePos
+                                                        : styles
+                                                            .balanceNeg
                                                 }>
-                                                    {b.netAmount >= 0
+                                                    {parseFloat(
+                                                    b.netAmount)
+                                                    >= 0
                                                         ? `gets back ${formatCurrency(b.netAmount)}`
-                                                        : `owes ${formatCurrency(Math.abs(b.netAmount))}`
+                                                        : `owes ${formatCurrency(Math.abs(parseFloat(b.netAmount)))}`
                                                     }
                                                 </div>
                                             </div>
@@ -598,41 +785,63 @@ export default function GroupDetail() {
                         </div>
                     )}
 
-                    {/* Members Tab */}
+                    {/* ══ Members Tab ══ */}
                     {activeTab === 'members' && (
                         <div className={styles.card}>
-                            <div className={styles.cardHeader}>
-                                <h3 className={styles.cardTitle}>
-                                    Members ({group.members?.length || 0})
+                            <div className={
+                                styles.cardHeader}>
+                                <h3 className={
+                                    styles.cardTitle}>
+                                    Members (
+                                    {group.members
+                                        ?.length || 0}
+                                    )
                                 </h3>
                                 <button
-                                    className={styles.btnSmall}
-                                    onClick={() => setShowAddMember(true)}
+                                    className={
+                                        styles.btnSmall}
+                                    onClick={() =>
+                                        setShowAddMember(
+                                            true)}
                                 >
                                     + Add
                                 </button>
                             </div>
-                            <div className={styles.cardBody}>
-                                {group.members?.map(m => (
+                            <div className={
+                                styles.cardBody}>
+                                {group.members
+                                    ?.map(m => (
                                     <div
                                         key={m.id}
-                                        className={styles.memberRow}
+                                        className={
+                                            styles
+                                            .memberRow}
                                     >
-                                        <Avatar name={m.name} size={38} />
-                                        <div className={styles.memberInfo}>
+                                        <Avatar
+                                            name={m.name}
+                                            size={38}
+                                        />
+                                        <div className={
+                                            styles
+                                            .memberInfo}>
                                             <div className={
-                                                styles.memberName}>
+                                                styles
+                                                .memberName}>
                                                 {m.name}
                                                 {m.id ===
-                                                    group.createdBy?.id && (
+                                                group
+                                                .createdBy
+                                                ?.id && (
                                                     <span className={
-                                                        styles.adminBadge}>
+                                                        styles
+                                                        .adminBadge}>
                                                         admin
                                                     </span>
                                                 )}
                                             </div>
                                             <div className={
-                                                styles.memberEmail}>
+                                                styles
+                                                .memberEmail}>
                                                 {m.email}
                                             </div>
                                         </div>
@@ -642,160 +851,220 @@ export default function GroupDetail() {
                         </div>
                     )}
 
-                    {/* Settings Tab */}
+                    {/* ══ Settings Tab ══ */}
                     {activeTab === 'settings' && (
                         <div className={styles.card}>
-                            <div className={styles.cardHeader}>
-                                <h3 className={styles.cardTitle}>
+                            <div className={
+                                styles.cardHeader}>
+                                <h3 className={
+                                    styles.cardTitle}>
                                     Group Settings
                                 </h3>
                             </div>
-                            <div className={styles.cardBody}>
+                            <div className={
+                                styles.cardBody}>
 
                                 {/* Share link */}
-                                <div className={styles.settingRow}>
-                                    <div className={styles.settingInfo}>
-                                        <div className={styles.settingTitle}>
-                                            Share Group Link
+                                <div className={
+                                    styles.settingRow}>
+                                    <div className={
+                                        styles
+                                        .settingInfo}>
+                                        <div className={
+                                            styles
+                                            .settingTitle}>
+                                            Share Group
+                                            Link
                                         </div>
-                                        <div className={styles.settingDesc}>
-                                            Invite new members via link
+                                        <div className={
+                                            styles
+                                            .settingDesc}>
+                                            Invite new
+                                            members
                                         </div>
                                     </div>
                                     <button
-                                        className={styles.btnSmall}
-                                        onClick={handleShareLink}
+                                        className={
+                                            styles
+                                            .btnSmall}
+                                        onClick={
+                                            handleShareLink}
                                     >
-                                        {linkCopied ? '✅ Copied' : '🔗 Copy Link'}
+                                        {linkCopied
+                                            ? '✅ Copied'
+                                            : '🔗 Copy'}
                                     </button>
                                 </div>
 
                                 {/* Add Member */}
-                                <div className={styles.settingRow}>
-                                    <div className={styles.settingInfo}>
-                                        <div className={styles.settingTitle}>
+                                <div className={
+                                    styles.settingRow}>
+                                    <div className={
+                                        styles
+                                        .settingInfo}>
+                                        <div className={
+                                            styles
+                                            .settingTitle}>
                                             Add Member
                                         </div>
-                                        <div className={styles.settingDesc}>
-                                            Add a new member by email
+                                        <div className={
+                                            styles
+                                            .settingDesc}>
+                                            Add by email
                                         </div>
                                     </div>
                                     <button
-                                        className={styles.btnSmall}
-                                        onClick={() => setShowAddMember(true)}
+                                        className={
+                                            styles
+                                            .btnSmall}
+                                        onClick={() =>
+                                            setShowAddMember(
+                                                true)}
                                     >
                                         + Add
                                     </button>
                                 </div>
 
-                                {/* Leave Group — non-creators only */}
+                                {/* Leave Group */}
                                 {!isCreator && (
-                                    <div className={styles.settingRow}>
-                                        <div className={styles.settingInfo}>
-                                            <div className={styles.settingTitle}>
+                                    <div className={
+                                        styles
+                                        .settingRow}>
+                                        <div className={
+                                            styles
+                                            .settingInfo}>
+                                            <div className={
+                                                styles
+                                                .settingTitle}>
                                                 Leave Group
                                             </div>
-                                            <div className={styles.settingDesc}>
-                                                {settledStatus.memberSettled
-                                                    ? '✅ Your balance is settled. You can leave.'
-                                                    : '⚠️ You must settle your balance before leaving.'}
+                                            <div className={
+                                                styles
+                                                .settingDesc}>
+                                                {settledStatus
+                                                .memberSettled
+                                                    ? '✅ Balance settled'
+                                                    : '⚠️ Settle first'}
                                             </div>
                                         </div>
                                         <button
                                             className={
-                                                settledStatus.memberSettled
-                                                    ? styles.btnWarn
-                                                    : styles.btnDisabledWarn
-                                            }
+                                                settledStatus
+                                                .memberSettled
+                                                    ? styles
+                                                        .btnWarn
+                                                    : styles
+                                                        .btnDisabledWarn}
                                             onClick={
-                                                settledStatus.memberSettled
-                                                    ? handleLeave
-                                                    : () => toast.error(
-                                                        'Please settle your balance first'
-                                                    )
-                                            }
-                                            disabled={leaving}
+                                                handleLeave}
+                                            disabled={
+                                                leaving}
                                         >
-                                            {leaving ? 'Leaving…' : '🚪 Leave Group'}
+                                            {leaving
+                                                ? 'Leaving…'
+                                                : '🚪 Leave'}
                                         </button>
                                     </div>
                                 )}
 
-                                {/* Delete Group — creator only */}
+                                {/* Delete Group */}
                                 {isCreator && (
-                                    <div className={styles.settingRow}>
-                                        <div className={styles.settingInfo}>
-                                            <div className={styles.settingTitle}>
+                                    <div className={
+                                        styles
+                                        .settingRow}>
+                                        <div className={
+                                            styles
+                                            .settingInfo}>
+                                            <div className={
+                                                styles
+                                                .settingTitle}>
                                                 Delete Group
                                             </div>
-                                            <div className={styles.settingDesc}>
-                                                {settledStatus.fullySettled
-                                                    ? '✅ All members settled. You can delete.'
-                                                    : '⚠️ All members must settle before deleting.'}
+                                            <div className={
+                                                styles
+                                                .settingDesc}>
+                                                {settledStatus
+                                                .fullySettled
+                                                    ? '✅ All settled'
+                                                    : '⚠️ All must settle first'}
                                             </div>
                                         </div>
                                         <button
                                             className={
-                                                settledStatus.fullySettled
-                                                    ? styles.btnDanger
-                                                    : styles.btnDisabledDanger
-                                            }
+                                                settledStatus
+                                                .fullySettled
+                                                    ? styles
+                                                        .btnDanger
+                                                    : styles
+                                                        .btnDisabledDanger}
                                             onClick={
-                                                settledStatus.fullySettled
-                                                    ? handleDelete
-                                                    : () => toast.error(
-                                                        'All members must settle first'
-                                                    )
-                                            }
-                                            disabled={deleting}
+                                                handleDelete}
+                                            disabled={
+                                                deleting}
                                         >
-                                            {deleting ? 'Deleting…' : '🗑️ Delete Group'}
+                                            {deleting
+                                                ? 'Deleting…'
+                                                : '🗑️ Delete'}
                                         </button>
                                     </div>
                                 )}
-
                             </div>
                         </div>
                     )}
                 </div>
 
-                {/* ── Right: Group Balances sidebar ── */}
+                {/* ── Right: Group Balances ── */}
                 <div className={styles.rightCol}>
                     <div className={styles.card}>
-                        <div className={styles.cardHeader}>
-                            <h3 className={styles.cardTitle}>
+                        <div className={
+                            styles.cardHeader}>
+                            <h3 className={
+                                styles.cardTitle}>
                                 GROUP BALANCES
                             </h3>
                         </div>
-                        <div className={styles.cardBody}>
+                        <div className={
+                            styles.cardBody}>
                             {balances.length === 0 ? (
-                                <div className={styles.allSettled}>
+                                <div className={
+                                    styles.allSettled}>
                                     ✅ All settled up!
                                 </div>
                             ) : (
                                 balances.map((b, i) => (
                                     <div
                                         key={i}
-                                        className={styles.sideBalanceRow}
+                                        className={
+                                            styles
+                                            .sideBalanceRow}
                                     >
                                         <Avatar
-                                            name={b.friendName}
+                                            name={
+                                                b.friendName}
                                             size={36}
                                         />
                                         <div className={
-                                            styles.sideBalanceInfo}>
+                                            styles
+                                            .sideBalanceInfo}>
                                             <div className={
-                                                styles.sideBalanceName}>
+                                                styles
+                                                .sideBalanceName}>
                                                 {b.friendName}
                                             </div>
                                             <div className={
-                                                b.netAmount >= 0
-                                                    ? styles.balancePos
-                                                    : styles.balanceNeg
+                                                parseFloat(
+                                                b.netAmount)
+                                                >= 0
+                                                    ? styles
+                                                        .balancePos
+                                                    : styles
+                                                        .balanceNeg
                                             }>
-                                                {b.netAmount >= 0
+                                                {parseFloat(
+                                                b.netAmount)
+                                                >= 0
                                                     ? `gets back ${formatCurrency(b.netAmount)}`
-                                                    : `owes ${formatCurrency(Math.abs(b.netAmount))}`
+                                                    : `owes ${formatCurrency(Math.abs(parseFloat(b.netAmount)))}`
                                                 }
                                             </div>
                                         </div>
@@ -820,52 +1089,71 @@ export default function GroupDetail() {
                     footer={
                         <>
                             <button
-                                className={styles.btnOutline}
+                                className={
+                                    styles.btnOutline}
                                 onClick={() => {
-                                    setShowAddMember(false)
+                                    setShowAddMember(
+                                        false)
                                     setMemberEmail('')
                                 }}
                             >
                                 Cancel
                             </button>
                             <button
-                                className={styles.btnPrimary}
-                                onClick={handleAddMember}
+                                className={
+                                    styles.btnPrimary}
+                                onClick={
+                                    handleAddMember}
                                 disabled={addingMember}
                             >
-                                {addingMember ? 'Adding…' : 'Add Member'}
+                                {addingMember
+                                    ? 'Adding…'
+                                    : 'Add Member'}
                             </button>
                         </>
                     }
                 >
                     <div className={styles.formGroup}>
-                        <label className={styles.formLabel}>
+                        <label className={
+                            styles.formLabel}>
                             Member's Email
                         </label>
                         <input
-                            className={styles.formInput}
+                            className={
+                                styles.formInput}
                             type="email"
                             value={memberEmail}
-                            onChange={e => setMemberEmail(e.target.value)}
+                            onChange={e =>
+                                setMemberEmail(
+                                    e.target.value)}
                             placeholder="friend@email.com"
                             autoFocus
                             onKeyDown={e =>
-                                e.key === 'Enter' && handleAddMember()}
+                                e.key === 'Enter' &&
+                                handleAddMember()}
                         />
                         <p className={styles.hint}>
-                            They must have an Equitly account.
+                            They must have an
+                            Equitly account.
                         </p>
                     </div>
                 </Modal>
             )}
 
-            {/* Add Expense */}
+            {/* Add / Edit Expense */}
             {showAdd && (
                 <AddExpenseModal
-                    onClose={() => setShowAdd(false)}
-                    onSave={handleAddExpense}
+                    onClose={() => {
+                        setShowAdd(false)
+                        setEditingExpense(null)
+                    }}
+                    onSave={editingExpense
+                        ? handleEditExpense
+                        : handleAddExpense}
+                    expense={editingExpense}
                     friends={
-                        group.members?.filter(m => m.id !== user?.id)
+                        group.members?.filter(
+                            m => m.id !== user?.id)
                         || friends
                     }
                     groups={[group]}
@@ -876,16 +1164,23 @@ export default function GroupDetail() {
             {/* Settle Up */}
             {showSettle && (
                 <SettleUpModal
-                    onClose={() => setShowSettle(false)}
+                    onClose={() =>
+                        setShowSettle(false)}
                     balances={balances}
-                    onSettle={async (friendId, amount) => {
-                        // Pass groupId so settlement is linked to group
-                        await settleUp(friendId, amount, id)
-                        const [b, s] = await Promise.all([
-                            groupApi.getBalances(id),
-                            groupApi.checkSettled(id)
-                        ])
-                        setBalances(Array.isArray(b) ? b : [])
+                    onSettle={async (
+                            friendId, amount) => {
+                        await settleUp(
+                            friendId, amount, id)
+                        const [b, s] =
+                            await Promise.all([
+                                groupApi.getBalances(
+                                    id),
+                                groupApi.checkSettled(
+                                    id)
+                            ])
+                        setBalances(
+                            Array.isArray(b)
+                                ? b : [])
                         setSettledStatus(s)
                         setShowSettle(false)
                     }}

@@ -1,8 +1,11 @@
 import { useState, useEffect, useMemo } from 'react'
-import { NavLink, useNavigate, useLocation } from 'react-router-dom'
+import { NavLink, useNavigate, useLocation }
+    from 'react-router-dom'
 import { useApp } from '../../context/AppContext'
-import { useAuth} from '../../context/AuthContext'
-import { formatCurrency, getInitials } from '../../utils/formatCurrency'
+import { useAuth } from '../../context/AuthContext'
+import {
+    getInitials
+} from '../../utils/formatCurrency'
 import Modal from '../common/Modal'
 import styles from './Sidebar.module.css'
 
@@ -17,15 +20,21 @@ export default function Sidebar() {
         addFriend
     } = useApp()
 
+    // ── Get current user ──
+    const { user } = useAuth()
+
     const navigate = useNavigate()
     const location = useLocation()
 
-    const [showInvite, setShowInvite] = useState(false)
-    const [inviteEmail, setInviteEmail] = useState('')
+    const [showInvite, setShowInvite] =
+        useState(false)
+    const [inviteEmail, setInviteEmail] =
+        useState('')
     const [saving, setSaving] = useState(false)
-    const [groupsOpen, setGroupsOpen] = useState(true)
-    const [friendsOpen, setFriendsOpen] = useState(true)
-    const { user } = useAuth()
+    const [groupsOpen, setGroupsOpen] =
+        useState(true)
+    const [friendsOpen, setFriendsOpen] =
+        useState(true)
 
     useEffect(() => {
         fetchGroups()
@@ -34,18 +43,16 @@ export default function Sidebar() {
     }, [location.pathname])
 
     // ── Build combined people list ──
-    // Include both friends AND group members
     const allPeople = useMemo(() => {
         const peopleMap = new Map()
 
-        // Add explicit friends first
         if (Array.isArray(friends)) {
             friends.forEach(f => {
-                if (f && f.id) peopleMap.set(f.id, f)
+                if (f && f.id)
+                    peopleMap.set(f.id, f)
             })
         }
 
-        // Add group members
         if (Array.isArray(groups)) {
             groups.forEach(group => {
                 if (Array.isArray(group.members)) {
@@ -59,29 +66,27 @@ export default function Sidebar() {
             })
         }
 
-        // Remove current user
+        // ── Remove current user ──
         if (user?.id) {
             peopleMap.delete(user.id)
         }
 
-        // ── Sort alphabetically by name to keep order stable ──
         return Array.from(peopleMap.values())
             .sort((a, b) =>
-                (a.name || '').localeCompare(b.name || ''))
+                (a.name || '').localeCompare(
+                    b.name || ''))
 
     }, [friends, groups, user])
 
-    const totalOwed = balances
-        .filter(b => parseFloat(b.netAmount) > 0)
-        .reduce((s, b) => s + parseFloat(b.netAmount), 0)
-
-    const totalOwe = balances
-        .filter(b => parseFloat(b.netAmount) < 0)
-        .reduce((s, b) => s + Math.abs(parseFloat(b.netAmount)), 0)
+    // Filter out current user
+    const filteredPeople = allPeople.filter(
+        p => p.id !== user?.id)
 
     const getBalance = (personId) => {
-        const bal = balances.find(b => b.friendId === personId)
-        return bal ? parseFloat(bal.netAmount) : 0
+        const bal = balances.find(
+            b => b.friendId === personId)
+        return bal
+            ? parseFloat(bal.netAmount) : 0
     }
 
     const handleInvite = async () => {
@@ -91,12 +96,14 @@ export default function Sidebar() {
             await addFriend(inviteEmail.trim())
             setShowInvite(false)
             setInviteEmail('')
+        } catch {
+            // handled in context
         } finally {
             setSaving(false)
         }
     }
 
-    // Color generator for avatars
+    // Color generator
     const COLORS = [
         '#1a6b4a', '#3b5bdb', '#e85d3e',
         '#d4830a', '#6741d9', '#0c8599'
@@ -104,7 +111,8 @@ export default function Sidebar() {
     const colorFor = (name = '') => {
         let hash = 0
         for (let i = 0; i < name.length; i++) {
-            hash = name.charCodeAt(i) + ((hash << 5) - hash)
+            hash = name.charCodeAt(i) +
+                ((hash << 5) - hash)
         }
         return COLORS[Math.abs(hash) % COLORS.length]
     }
@@ -122,7 +130,9 @@ export default function Sidebar() {
                             `${styles.navItem} ${isActive
                                 ? styles.active : ''}`}
                     >
-                        <span className={styles.icon}>◎</span>
+                        <span className={styles.icon}>
+                            ◎
+                        </span>
                         Dashboard
                     </NavLink>
 
@@ -132,7 +142,9 @@ export default function Sidebar() {
                             `${styles.navItem} ${isActive
                                 ? styles.active : ''}`}
                     >
-                        <span className={styles.icon}>◷</span>
+                        <span className={styles.icon}>
+                            ◷
+                        </span>
                         Recent Activity
                     </NavLink>
 
@@ -142,7 +154,9 @@ export default function Sidebar() {
                             `${styles.navItem} ${isActive
                                 ? styles.active : ''}`}
                     >
-                        <span className={styles.icon}>🧾</span>
+                        <span className={styles.icon}>
+                            🧾
+                        </span>
                         All Expenses
                     </NavLink>
                 </nav>
@@ -151,9 +165,11 @@ export default function Sidebar() {
                 <div className={styles.section}>
                     <div
                         className={styles.sectionHeader}
-                        onClick={() => setGroupsOpen(o => !o)}
+                        onClick={() =>
+                            setGroupsOpen(o => !o)}
                     >
-                        <span className={styles.sectionLabel}>
+                        <span className={
+                            styles.sectionLabel}>
                             GROUPS
                         </span>
                         <span className={styles.chevron}>
@@ -162,37 +178,49 @@ export default function Sidebar() {
                     </div>
 
                     {groupsOpen && (
-                        <div className={styles.sectionBody}>
+                        <div className={
+                            styles.sectionBody}>
                             {Array.isArray(groups) &&
                             groups.length > 0 ? (
                                 groups.map(g => (
                                     <NavLink
                                         key={g.id}
                                         to={`/groups/${g.id}`}
-                                        className={({ isActive }) =>
+                                        className={({
+                                            isActive
+                                        }) =>
                                             `${styles.subItem} ${isActive
-                                                ? styles.subItemActive
+                                                ? styles
+                                                    .subItemActive
                                                 : ''}`}
                                     >
-                                        <span className={styles.subIcon}>
-                                            {g.emoji || '👥'}
+                                        <span className={
+                                            styles.subIcon}>
+                                            {g.emoji
+                                                || '👥'}
                                         </span>
-                                        <span className={styles.subLabel}>
+                                        <span className={
+                                            styles.subLabel}>
                                             {g.name}
                                         </span>
                                     </NavLink>
                                 ))
                             ) : (
-                                <div className={styles.emptyNote}>
+                                <div className={
+                                    styles.emptyNote}>
                                     No groups yet
                                 </div>
                             )}
 
                             <button
                                 className={styles.addBtn}
-                                onClick={() => navigate('/groups')}
+                                onClick={() =>
+                                    navigate('/groups')}
                             >
-                                <span className={styles.addIcon}>+</span>
+                                <span className={
+                                    styles.addIcon}>
+                                    +
+                                </span>
                                 Add a Group
                             </button>
                         </div>
@@ -203,9 +231,11 @@ export default function Sidebar() {
                 <div className={styles.section}>
                     <div
                         className={styles.sectionHeader}
-                        onClick={() => setFriendsOpen(o => !o)}
+                        onClick={() =>
+                            setFriendsOpen(o => !o)}
                     >
-                        <span className={styles.sectionLabel}>
+                        <span className={
+                            styles.sectionLabel}>
                             FRIENDS
                         </span>
                         <span className={styles.chevron}>
@@ -214,70 +244,96 @@ export default function Sidebar() {
                     </div>
 
                     {friendsOpen && (
-                        <div className={styles.sectionBody}>
-                            {allPeople.length > 0 ? (
-                                allPeople.map(person => {
-                                    const bal = getBalance(person.id)
-                                    const color = colorFor(
-                                        person.name || '')
-                                    const initials = getInitials(
-                                        person.name || '')
+                        <div className={
+                            styles.sectionBody}>
+                            {filteredPeople.length > 0
+                                ? filteredPeople.map(
+                                    person => {
+                                const color = colorFor(
+                                    person.name || '')
+                                const initials =
+                                    getInitials(
+                                        person.name
+                                        || '')
 
-                                    return (
-                                        <NavLink
-                                            key={person.id}
-                                            to="/friends"
-                                            className={({ isActive }) =>
-                                                `${styles.friendItem} ${isActive
-                                                    ? styles.subItemActive
-                                                    : ''}`}
+                                return (
+                                    // ── Navigate to
+                                    // friends page
+                                    // with person ID ──
+                                    <div
+                                        key={person.id}
+                                        className={
+                                            styles
+                                            .friendItem}
+                                        onClick={() =>
+                                            navigate(
+                                                `/friends/${person.id}`
+                                            )}
+                                    >
+                                        <div
+                                            className={
+                                                styles
+                                                .friendAvatar}
+                                            style={{
+                                                background:
+                                                    color
+                                            }}
                                         >
-                                            {/* Avatar */}
-                                            <div
-                                                className={styles.friendAvatar}
-                                                style={{
-                                                    background: color
-                                                }}
-                                            >
-                                                {initials}
-                                            </div>
-
-                                            {/* Info */}
-                                            <div className={styles.friendInfo}>
-                                                <span className={styles.friendName}>
-                                                    {person.name}
-                                                </span>
-                                            </div>
-                                        </NavLink>
-                                    )
-                                })
-                            ) : (
-                                <div className={styles.emptyNote}>
+                                            {initials}
+                                        </div>
+                                        <div className={
+                                            styles
+                                            .friendInfo}>
+                                            <span className={
+                                                styles
+                                                .friendName}>
+                                                {person.name}
+                                            </span>
+                                        </div>
+                                    </div>
+                                )
+                            }) : (
+                                <div className={
+                                    styles.emptyNote}>
                                     No friends yet
                                 </div>
                             )}
 
                             {/* Invite Friends box */}
-                            <div className={styles.inviteBox}>
-                                <div className={styles.inviteBoxTitle}>
+                            <div className={
+                                styles.inviteBox}>
+                                <div className={
+                                    styles
+                                    .inviteBoxTitle}>
                                     Invite friends
                                 </div>
                                 <input
-                                    className={styles.inviteInput}
+                                    className={
+                                        styles
+                                        .inviteInput}
                                     type="email"
                                     placeholder="Enter an email address"
                                     value={inviteEmail}
                                     onChange={e =>
-                                        setInviteEmail(e.target.value)}
+                                        setInviteEmail(
+                                            e.target
+                                            .value)}
                                     onKeyDown={e =>
-                                        e.key === 'Enter' && handleInvite()}
+                                        e.key ===
+                                        'Enter' &&
+                                        handleInvite()}
                                 />
                                 <button
-                                    className={styles.inviteBoxBtn}
-                                    onClick={handleInvite}
+                                    className={
+                                        styles
+                                        .inviteBoxBtn}
+                                    onClick={
+                                        handleInvite}
                                     disabled={saving}
                                 >
-                                    {saving ? 'Sending…' : 'Send invite'}
+                                    {saving
+                                        ? 'Sending…'
+                                        : 'Send invite'}
                                 </button>
                             </div>
                         </div>
@@ -286,31 +342,39 @@ export default function Sidebar() {
 
             </aside>
 
-            {/* ── Invite Modal ── */}
+            {/* Invite Modal */}
             {showInvite && (
                 <Modal
                     title="Invite a Friend"
-                    onClose={() => setShowInvite(false)}
+                    onClose={() =>
+                        setShowInvite(false)}
                     footer={
                         <>
                             <button
-                                className={styles.btnOutline}
-                                onClick={() => setShowInvite(false)}
+                                className={
+                                    styles.btnOutline}
+                                onClick={() =>
+                                    setShowInvite(
+                                        false)}
                             >
                                 Cancel
                             </button>
                             <button
-                                className={styles.btnPrimary}
+                                className={
+                                    styles.btnPrimary}
                                 onClick={handleInvite}
                                 disabled={saving}
                             >
-                                {saving ? 'Sending…' : 'Send Invite'}
+                                {saving
+                                    ? 'Sending…'
+                                    : 'Send Invite'}
                             </button>
                         </>
                     }
                 >
                     <div className={styles.formGroup}>
-                        <label className={styles.formLabel}>
+                        <label className={
+                            styles.formLabel}>
                             Friend's Email
                         </label>
                         <input
@@ -318,15 +382,11 @@ export default function Sidebar() {
                             type="email"
                             value={inviteEmail}
                             onChange={e =>
-                                setInviteEmail(e.target.value)}
+                                setInviteEmail(
+                                    e.target.value)}
                             placeholder="friend@email.com"
                             autoFocus
-                            onKeyDown={e =>
-                                e.key === 'Enter' && handleInvite()}
                         />
-                        <p className={styles.hint}>
-                            They need an Equitly account to accept.
-                        </p>
                     </div>
                 </Modal>
             )}
