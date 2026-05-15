@@ -47,7 +47,8 @@ public class GroupController {
         List<Map<String, Object>> response =
                 groups.stream()
                 .map(g -> buildGroupMap(g, false))
-                .collect(Collectors.toList());
+                .collect(java.util.stream
+                        .Collectors.toList());
 
         return ResponseEntity.ok(response);
     }

@@ -1,13 +1,40 @@
-FROM eclipse-temurin:17-jdk-alpine AS build
-WORKDIR /app
-COPY . .
-RUN chmod +x mvnw
-RUN ./mvnw clean package -DskipTests
+# ══════════════════════════════════════
+# Stage 1 — Build using Maven
+# No mvnw needed — uses system Maven
+# ══════════════════════════════════════
+FROM maven:3.9-eclipse-temurin-17-alpine \
+    AS build
 
-FROM eclipse-temurin:17-jre-alpine
 WORKDIR /app
+
+# Copy pom.xml first for dependency caching
+COPY pom.xml .
+
+# Download all dependencies
+RUN mvn dependency:go-offline -B
+
+# Copy source code
+COPY src ./src
+
+# Build the JAR file
+RUN mvn clean package -DskipTests -B
+
+# ══════════════════════════════════════
+# Stage 2 — Run the app
+# Smaller image — only JRE needed
+# ══════════════════════════════════════
+FROM eclipse-temurin:17-jre-alpine
+
+WORKDIR /app
+
+# Copy JAR from build stage
 COPY --from=build /app/target/*.jar app.jar
+
+# Expose port
 EXPOSE 8081
-ENTRYPOINT ["java", "-jar", \
+
+# Run with production profile
+ENTRYPOINT ["java", \
+    "-jar", \
     "-Dspring.profiles.active=prod", \
     "app.jar"]

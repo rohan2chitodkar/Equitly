@@ -65,6 +65,7 @@ public class ActivityService {
     // ════════════════════════════════════════
     // ── Get activities for user ──
     // ════════════════════════════════════════
+    @Transactional(readOnly = true)
     public List<Activity> getActivitiesForUser(
             String userId) {
         try {
@@ -79,6 +80,7 @@ public class ActivityService {
     }
 
     // ── Get activities as DTO ──
+    @Transactional(readOnly = true)
     public List<ActivityResponseDto>
             getActivitiesForUserAsDto(String userId) {
         try {
@@ -113,12 +115,21 @@ public class ActivityService {
         dto.setTargetUserId(a.getTargetUserId());
         dto.setTargetUserName(a.getTargetUserName());
         dto.setCreatedAt(a.getCreatedAt());
-        if (a.getPerformedBy() != null) {
-            dto.setPerformedById(
-                    a.getPerformedBy().getId());
-            dto.setPerformedByName(
-                    a.getPerformedBy().getName());
+
+        // ── Safely access performedBy ──
+        try {
+            if (a.getPerformedBy() != null) {
+                dto.setPerformedById(
+                        a.getPerformedBy().getId());
+                dto.setPerformedByName(
+                        a.getPerformedBy().getName());
+            }
+        } catch (Exception e) {
+            System.err.println(
+                "Could not load performedBy: "
+                + e.getMessage());
         }
+
         return dto;
     }
 

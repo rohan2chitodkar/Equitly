@@ -25,12 +25,12 @@ public class Activity {
     private String description;
 
     @JsonIgnore
-    @ManyToOne(fetch = FetchType.LAZY)
+    @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "user_id")
     private User performedBy;
 
     @JsonIgnore
-    @ManyToOne(fetch = FetchType.LAZY)
+    @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "group_id", foreignKey = @ForeignKey(
         name = "FK_activity_group",
         foreignKeyDefinition = "FOREIGN KEY (group_id) REFERENCES user_groups(id) ON DELETE SET NULL"
