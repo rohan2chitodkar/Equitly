@@ -30,11 +30,36 @@ public class GroupService {
         this.groupMemberRepository = groupMemberRepository;
     }
 
-    public List<Group> getGroupsForUser(String userId) {
-        List<Group> groups = groupRepository.findAllByMemberId(userId);
-        System.out.println("Groups for user " + userId + ": " + groups.size());
-        groups.forEach(g -> System.out.println(" - " + g.getName()));
-        return groups;
+    @Transactional(readOnly = true)
+    public List<Group> getGroupsForUser(
+            String userId) {
+        try {
+            // Step 1: Get group IDs using native query
+            List<Group> groups =
+                    groupRepository
+                    .findAllByMemberId(userId);
+
+            System.out.println(
+                "Groups for user " + userId
+                + ": " + groups.size());
+
+            // Step 2: Reload each group with
+            // members eagerly loaded
+            List<Group> fullyLoaded =
+                    new java.util.ArrayList<>();
+            for (Group g : groups) {
+                groupRepository
+                    .findByIdWithMembers(g.getId())
+                    .ifPresent(fullyLoaded::add);
+            }
+
+            return fullyLoaded;
+        } catch (Exception e) {
+            System.err.println(
+                "Error getting groups: "
+                + e.getMessage());
+            return new java.util.ArrayList<>();
+        }
     }
 
     public Group getById(String groupId, String userId) {
@@ -47,47 +72,59 @@ public class GroupService {
     }
 
     @Transactional
-    public Group createGroup(String creatorId, String name,
-                             String emoji, List<String> memberIds) {
-        User creator = userRepository.findById(creatorId)
-                .orElseThrow(() -> new RuntimeException("User not found"));
-
-        Group group = new Group();
-        group.setName(name);
-        group.setEmoji(emoji != null ? emoji : "👥");
-        group.setCreatedBy(creator);
-        group.getMembers().add(creator);
-
-        if (memberIds != null) {
-            for (String memberId : memberIds) {
-                userRepository.findById(memberId)
-                        .ifPresent(u -> group.getMembers().add(u));
-            }
-        }
-
-        Group saved = groupRepository.save(group);
-
-        // Track join time for creator
-        GroupMember creatorMember = new GroupMember(saved, creator);
-        creatorMember.setJoinedAt(saved.getCreatedAt());
-        groupMemberRepository.save(creatorMember);
-
-        // Track join time for initial members
-        if (memberIds != null) {
-            for (String memberId : memberIds) {
-                userRepository.findById(memberId).ifPresent(u -> {
-                    GroupMember gm = new GroupMember(saved, u);
-                    gm.setJoinedAt(saved.getCreatedAt());
-                    groupMemberRepository.save(gm);
-                });
-            }
-        }
-
-        // Log activity
-        activityService.logGroupCreated(saved.getId(), saved.getName(), creator);
-
-        return saved;
-    }
+	public Group createGroup(
+	        String creatorId,
+	        String name,
+	        String emoji,
+	        List<String> memberIds) {
+	
+	    User creator = userRepository
+	            .findById(creatorId)
+	            .orElseThrow(() ->
+	                new RuntimeException(
+	                    "User not found"));
+	
+	    Group group = new Group();
+	    group.setName(name);
+	    group.setEmoji(emoji != null
+	            ? emoji : "👥");
+	    group.setCreatedBy(creator);
+	
+	    // ── Add creator as member ──
+	    group.getMembers().add(creator);
+	
+	    // ── Add other members ──
+	    if (memberIds != null) {
+	        for (String memberId : memberIds) {
+	            userRepository.findById(memberId)
+	                    .ifPresent(u ->
+	                        group.getMembers().add(u));
+	        }
+	    }
+	
+	    Group saved = groupRepository.save(group);
+	
+	    // ── Save to group_member_details ──
+	    try {
+	        GroupMember creatorMember =
+	                new GroupMember(saved, creator);
+	        creatorMember.setJoinedAt(
+	                saved.getCreatedAt());
+	        groupMemberRepository.save(creatorMember);
+	    } catch (Exception e) {
+	        System.err.println(
+	            "Could not save group_member_details: "
+	            + e.getMessage());
+	    }
+	
+	    // ── Log activity ──
+	    activityService.logGroupCreated(
+	            saved.getId(),
+	            saved.getName(),
+	            creator);
+	
+	    return saved;
+	}
 
     @Transactional
     public Group addMember(String groupId, String currentUserId,

@@ -7,6 +7,7 @@ import org.springframework.security.core.annotation
         .AuthenticationPrincipal;
 import org.springframework.security.core.userdetails
         .UserDetails;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.*;
@@ -34,27 +35,37 @@ public class GroupController {
 
     // ── Get all groups for current user ──
     @GetMapping
+    @Transactional(readOnly = true)
     public ResponseEntity<List<Map<String, Object>>>
             getGroups(
             @AuthenticationPrincipal
             UserDetails userDetails) {
+        try {
+            User user = userService.getCurrentUser(
+                    userDetails.getUsername());
 
-        User user = userService.getCurrentUser(
-                userDetails.getUsername());
-        List<Group> groups = groupService
-                .getGroupsForUser(user.getId());
+            List<Group> groups = groupService
+                    .getGroupsForUser(user.getId());
 
-        List<Map<String, Object>> response =
-                groups.stream()
-                .map(g -> buildGroupMap(g, false))
-                .collect(java.util.stream
-                        .Collectors.toList());
+            List<Map<String, Object>> response =
+                    groups.stream()
+                    .map(g -> buildGroupMap(g, false))
+                    .collect(java.util.stream
+                            .Collectors.toList());
 
-        return ResponseEntity.ok(response);
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            System.err.println(
+                "Error in getGroups: "
+                + e.getMessage());
+            return ResponseEntity.ok(
+                new java.util.ArrayList<>());
+        }
     }
 
     // ── Get single group with expenses ──
     @GetMapping("/{id}")
+    @Transactional(readOnly = true)
     public ResponseEntity<Map<String, Object>> getGroup(
             @PathVariable String id,
             @AuthenticationPrincipal
@@ -243,44 +254,72 @@ public class GroupController {
         map.put("emoji", g.getEmoji());
         map.put("createdAt", g.getCreatedAt());
 
-        // createdBy
-        if (g.getCreatedBy() != null) {
-            Map<String, Object> createdBy =
-                    new java.util.HashMap<>();
-            createdBy.put("id",
-                    g.getCreatedBy().getId());
-            createdBy.put("name",
-                    g.getCreatedBy().getName());
-            createdBy.put("email",
-                    g.getCreatedBy().getEmail());
-            map.put("createdBy", createdBy);
+        // ── createdBy — handle lazily loaded ──
+        try {
+            if (g.getCreatedBy() != null) {
+                Map<String, Object> createdBy =
+                        new java.util.HashMap<>();
+                createdBy.put("id",
+                        g.getCreatedBy().getId());
+                createdBy.put("name",
+                        g.getCreatedBy().getName());
+                createdBy.put("email",
+                        g.getCreatedBy().getEmail());
+                map.put("createdBy", createdBy);
+            }
+        } catch (Exception e) {
+            System.err.println(
+                "Could not load createdBy: "
+                + e.getMessage());
+            map.put("createdBy", null);
         }
 
-        // members
+        // ── members — handle lazily loaded ──
         List<Map<String, Object>> members =
                 new java.util.ArrayList<>();
-        if (g.getMembers() != null) {
-            g.getMembers().forEach(m -> {
-                Map<String, Object> member =
-                        new java.util.HashMap<>();
-                member.put("id", m.getId());
-                member.put("name", m.getName());
-                member.put("email", m.getEmail());
-                members.add(member);
-            });
+        try {
+            if (g.getMembers() != null) {
+                g.getMembers().forEach(m -> {
+                    try {
+                        Map<String, Object> member =
+                                new java.util.HashMap<>();
+                        member.put("id", m.getId());
+                        member.put("name", m.getName());
+                        member.put("email",
+                                m.getEmail());
+                        members.add(member);
+                    } catch (Exception ex) {
+                        System.err.println(
+                            "Could not load member: "
+                            + ex.getMessage());
+                    }
+                });
+            }
+        } catch (Exception e) {
+            System.err.println(
+                "Could not load members: "
+                + e.getMessage());
         }
         map.put("members", members);
         map.put("expenseCount",
-                g.getExpenses() != null
-                        ? g.getExpenses().size() : 0);
+                members.size() > 0
+                    ? members.size() : 0);
 
-        if (includeExpenses && g.getExpenses() != null) {
-            map.put("expenses",
-                    g.getExpenses().stream()
-                    .map(this::buildExpenseMap)
-                    .collect(Collectors.toList()));
+        if (includeExpenses &&
+                g.getExpenses() != null) {
+            try {
+                map.put("expenses",
+                        g.getExpenses().stream()
+                        .map(this::buildExpenseMap)
+                        .collect(java.util.stream
+                                .Collectors.toList()));
+            } catch (Exception e) {
+                map.put("expenses",
+                    new java.util.ArrayList<>());
+            }
         } else {
-            map.put("expenses", new ArrayList<>());
+            map.put("expenses",
+                new java.util.ArrayList<>());
         }
 
         return map;

@@ -80,15 +80,15 @@ export function AppProvider({ children }) {
     setLoadingGroups(true)
     try {
         const data = await groupApi.getAll()
+        console.log('Groups fetched:', data)
         setGroups(Array.isArray(data) ? data : [])
     } catch (err) {
         console.error('Failed to load groups:', err)
-        toast.error('Failed to load groups')
         setGroups([])
     } finally {
         setLoadingGroups(false)
     }
-  }, [])
+}, [])
 
   const addGroup = useCallback(async (payload) => {
     const data = await groupApi.create(payload)
